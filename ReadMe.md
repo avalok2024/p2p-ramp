@@ -1,14 +1,15 @@
-# 🚀 RampX – P2P Crypto On/Off Ramp
+# 🚀 RampX
 
-## 🧠 Overview
+## 🧠 What is RampX?
 
-**RampX** is a next-generation **P2P Crypto ↔ Fiat On/Off Ramp platform** that enables users to seamlessly buy and sell cryptocurrencies (USDT, USDC, BTC, etc.) using fiat (₹ via UPI/Bank Transfer) through trusted merchants.
+**RampX** is a peer-to-peer (P2P) platform that enables people to seamlessly convert between **fiat (₹)** and **cryptocurrency**.
 
-RampX is built on a **trust-first architecture** powered by:
+It connects:
 
-* 🔐 Escrow System
-* ⚙️ State Machine Workflow
-* ⚖️ Admin Dispute Resolution
+* People who want to **buy or sell crypto**
+* With trusted **merchants who provide liquidity**
+
+All transactions are secured through an **escrow-based trust system**.
 
 ---
 
@@ -16,243 +17,132 @@ RampX is built on a **trust-first architecture** powered by:
 
 ### 👤 Users
 
-* Buy crypto using fiat instantly
-* Sell crypto and receive fiat
-* Secure transactions with escrow protection
-
-### 🏪 Merchants (Liquidity Providers)
-
-* Provide crypto/fiat liquidity
-* Earn profit via spreads
-* Manage trades efficiently
-
-### 🛡️ Admin (Trust Layer)
-
-* Resolve disputes
-* Monitor fraud & abuse
-* Maintain platform integrity
+* Want to buy crypto using UPI or bank transfer
+* Want to sell crypto and receive fiat
+* Need a simple and secure way to move between fiat and crypto
 
 ---
 
-## ❗ Problem RampX Solves
+### 🏪 Merchants
 
-Current P2P systems face:
+* Provide crypto or fiat liquidity
+* Earn profit through price spreads
+* Handle high-volume transactions efficiently
 
+---
+
+### 🛡️ Platform (RampX)
+
+* Ensures trust between both parties
+* Secures funds using escrow
+* Resolves disputes fairly
+
+---
+
+## ❗ The Problem
+
+P2P crypto trading today suffers from:
+
+* ❌ Lack of trust between buyers and sellers
 * ❌ Fake payment claims
-* ❌ Trust issues between strangers
-* ❌ Weak dispute resolution
-* ❌ Slow/manual processes
+* ❌ Delayed or manual verification
+* ❌ Weak dispute handling systems
 
 ---
 
-## ✅ RampX Solution
+## ✅ The RampX Solution
 
-RampX solves these with:
+RampX solves these problems with a **trust-first system**:
 
-* 🔐 **Escrow-first design** → Funds locked before payment
-* ⚙️ **State-driven system** → Clear and secure flow
-* 🔁 **Dual confirmation model** → No single-point trust
-* ⚖️ **Admin intervention engine** → Fast dispute resolution
-* 📊 **Reputation system** → Reduces fraud over time
+### 🔐 Escrow Protection
+
+Crypto is locked before any payment begins, ensuring neither party can cheat.
 
 ---
 
-## 🏗️ Architecture
+### 🔁 Dual Confirmation Model
 
-### Frontend (3 Apps)
+Transactions only complete when:
 
-* 👤 User App
-* 🏪 Merchant Dashboard
-* 🛡️ Admin Panel
-
-### Backend (Single System)
-
-* Auth
-* User
-* Merchant
-* Order
-* Matching Engine
-* Escrow
-* Payment
-* Wallet
-* Dispute
-
-### Infrastructure
-
-* PostgreSQL
-* Redis
-* Queue (BullMQ / Kafka)
-* Blockchain (Ethereum / Polygon)
+* Payment is confirmed by the counterparty
+* Or resolved by the platform
 
 ---
 
-## 🔄 Core Flows
+### ⚖️ Dispute Resolution System
 
-### 🟢 BUY FLOW (Fiat → Crypto)
+If something goes wrong:
 
-1. User creates order
-2. Merchant matched
-3. Escrow locks crypto
-4. User pays fiat
+* A dispute is raised
+* Evidence is reviewed
+* A final decision is made by RampX
+
+---
+
+### 📊 Reputation System
+
+* Users and merchants build trust over time
+* Bad actors are filtered out
+
+---
+
+## 🔄 How RampX Works
+
+### 🟢 Buying Crypto
+
+1. User places a buy order
+2. RampX matches a merchant
+3. Crypto is locked in escrow
+4. User sends payment
 5. Merchant confirms
-6. Crypto released
+6. Crypto is released
 
 ---
 
-### 🔴 SELL FLOW (Crypto → Fiat)
+### 🔴 Selling Crypto
 
-1. User creates order
-2. Escrow locks crypto
-3. Merchant pays fiat
+1. User places a sell order
+2. Crypto is locked in escrow
+3. Merchant sends payment
 4. User confirms
-5. Crypto released
+5. Crypto is released
 
 ---
 
-## 🔐 Escrow System
+## 🔐 Trust System
 
-* Crypto is locked before payment begins
-* Released only when:
+RampX operates on a simple principle:
 
-  * Merchant confirms OR
-  * Admin resolves dispute
+> Funds are never released without confirmation.
 
----
+This ensures:
 
-## 💳 Payment Verification
-
-RampX uses:
-
-* “I Paid” signal
-* Merchant confirmation
-* Unique amount & reference tracking
+* No fake payments
+* No double spending
+* No loss of funds
 
 ---
 
-## ⚖️ Dispute System
+## 💥 Why RampX is Different
 
-### Flow:
-
-1. Dispute raised
-2. Order → DISPUTE
-3. Admin reviews evidence
-4. Final decision executed
+* ⚡ Fast and simple P2P experience
+* 🔐 Strong escrow-based security
+* ⚖️ Reliable dispute handling
+* 📈 Built for scale with merchants
 
 ---
 
-## 👛 Smart Wallet System
+## 🚀 Vision
 
-RampX provides each user and merchant with a **Smart Wallet**:
+RampX aims to become:
 
-* ⚡ Fast internal ledger
-* ⛓️ Blockchain custody
-* 🔒 Escrow locking
+> 🌍 The most trusted bridge between fiat and crypto.
 
----
+Making it easy for anyone to:
 
-## 🔐 Security
-
-* JWT Authentication
-* Role-Based Access (RBAC)
-* Fraud detection
-* Audit logs
-
----
-
-## 🧰 Tech Stack
-
-### Backend
-
-* Node.js (NestJS)
-* PostgreSQL
-* Redis
-
-### Frontend
-
-* React / Next.js
-
-### Blockchain
-
-* Ethers.js
-* Infura / Alchemy
-
----
-
-## 🛠️ Setup
-
-```bash
-git clone <repo>
-cd rampx
-npm install
-npm run dev
-```
-
----
-
-## 🔑 Environment Variables
-
-```env
-DB_URL=
-JWT_SECRET=
-REDIS_URL=
-BLOCKCHAIN_RPC=
-```
-
----
-
-## 📡 API (Sample)
-
-```http
-POST /orders
-POST /orders/:id/pay
-POST /orders/:id/confirm
-POST /admin/orders/:id/resolve
-```
-
----
-
-## 📂 Project Structure
-
-```
-/src
-  /auth
-  /user
-  /merchant
-  /order
-  /matching
-  /escrow
-  /payment
-  /wallet
-  /dispute
-  /admin
-```
-
----
-
-## 🚀 Roadmap
-
-### Phase 1
-
-* MVP backend
-* Manual payment system
-
-### Phase 2
-
-* Redis + queues
-* Improved matching
-
-### Phase 3
-
-* Smart contracts
-* AI fraud detection
-
----
-
-## 💥 Final Insight
-
-> RampX is not just a crypto app.
-
-🔥 It is a **Trust Infrastructure for P2P Finance**
+* Enter crypto
+* Exit crypto
+* Trade safely without intermediaries
 
 ---
 
