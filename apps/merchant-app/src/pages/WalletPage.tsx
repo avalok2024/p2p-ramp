@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { ethers } from 'ethers';
+import { QRCodeCanvas } from 'qrcode.react';
 import api from '../api/client';
 import { useWeb3Store } from '../store/web3.store';
 
@@ -10,12 +12,43 @@ export default function WalletPage() {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { address, balanceEth } = useWeb3Store();
+  const { address, balanceEth, wallet, fetchBalance } = useWeb3Store();
+
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [sendAddress, setSendAddress] = useState('');
+  const [sendAmount, setSendAmount] = useState('');
+  const [sendLoading, setSendLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     api.get('/wallet').then(r => setWallets(r.data));
     api.get('/wallet/transactions').then(r => setTxns(r.data));
   }, []);
+
+  const handleSendEth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wallet) return toast.error('Wallet not initialized');
+    if (!sendAddress || !sendAmount) return toast.error('Fill all fields');
+    try {
+      setSendLoading(true);
+      const tx = await wallet.sendTransaction({
+        to: sendAddress,
+        value: ethers.parseEther(sendAmount)
+      });
+      toast.success('Transaction sent! Waiting...');
+      await tx.wait();
+      setShowSendModal(false);
+      setShowSuccessModal(true);
+      setSendAmount('');
+      setSendAddress('');
+      if (fetchBalance) fetchBalance();
+    } catch (err: any) {
+      toast.error(err.shortMessage || err.message || 'Transaction failed');
+    } finally {
+      setSendLoading(false);
+    }
+  };
 
   const copyToClipboard = () => {
     if (address) {
@@ -42,9 +75,9 @@ export default function WalletPage() {
 
       {usdt && (
         <motion.div className="card card-glow" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="label">ETH Available Balance</p>
+          <p className="label">USDT Available Balance (Platform)</p>
           <h2 className="title-xl" style={{ margin: '8px 0', fontFamily: 'monospace' }}>
-            {balanceEth} <span style={{ fontSize: 16, color: 'var(--accent)' }}>ETH</span>
+            {parseFloat(usdt.availableBalance).toFixed(4)} <span style={{ fontSize: 16, color: 'var(--accent)' }}>USDT</span>
           </h2>
           {+usdt.lockedBalance > 0 && <p className="body-sm">🔒 {(+usdt.lockedBalance).toFixed(4)} USDT in active escrows</p>}
         </motion.div>
@@ -106,6 +139,26 @@ export default function WalletPage() {
             Generating your secure internal wallet...
           </p>
         )}
+
+        {/* Send and Receive Action Buttons */}
+        {address && (
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button 
+              className="btn btn-primary" 
+              style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} 
+              onClick={() => setShowSendModal(true)}
+            >
+              <span>⬆️</span> Send
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} 
+              onClick={() => setShowReceiveModal(true)}
+            >
+              <span>⬇️</span> Receive
+            </button>
+          </div>
+        )}
       </div>
       {/* Simulated deposit */}
       {/* <div className="card" style={{ opacity: 0.6 }}>
@@ -130,6 +183,87 @@ export default function WalletPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Send Modal */}
+      <AnimatePresence>
+        {showSendModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          >
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="card" style={{ width: '100%', maxWidth: 400, backgroundColor: '#111218', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 className="title-md" style={{ margin: 0 }}>Send ETH</h3>
+                <button onClick={() => setShowSendModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer' }}>✕</button>
+              </div>
+              <form onSubmit={handleSendEth} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <label className="label">Recipient Address</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="text" className="input" placeholder="0x..." value={sendAddress} onChange={e => setSendAddress(e.target.value)} required disabled={sendLoading} style={{ flex: 1 }} />
+                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 20 }} onClick={() => toast('Scanner coming soon!')} title="Scan QR">📷</button>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <label className="label" style={{ margin: 0 }}>Amount (ETH)</label>
+                    <button type="button" onClick={() => setSendAmount(balanceEth)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>MAX</button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input type="number" className="input" placeholder="0.0" step="0.0001" value={sendAmount} onChange={e => setSendAmount(e.target.value)} required disabled={sendLoading} style={{ flex: 1 }} />
+                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => toast('Currency converter preview coming soon!')} title="Swap Currency">
+                      ⇌ ETH
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" className="btn btn-primary" disabled={sendLoading}>
+                  {sendLoading ? 'Sending...' : 'Confirm Send'}
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Receive Modal */}
+        {showReceiveModal && address && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          >
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="card" style={{ width: '100%', maxWidth: 350, textAlign: 'center', backgroundColor: '#111218', border: '1px solid rgba(255,255,255,0.1)' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 className="title-md" style={{ margin: 0 }}>Receive ETH</h3>
+                <button onClick={() => setShowReceiveModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer' }}>✕</button>
+              </div>
+              
+              <div style={{ background: 'white', padding: 16, borderRadius: 12, display: 'inline-block', marginBottom: 20 }}>
+                <QRCodeCanvas value={address} size={200} />
+              </div>
+              
+              <p className="body-sm" style={{ marginBottom: 8, color: 'rgba(255,255,255,0.7)' }}>Your Public Address</p>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: 12, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <span className="mono" style={{ fontSize: 13, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{address}</span>
+                <button onClick={copyToClipboard} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, marginLeft: 8 }} title="Copy">📋</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          >
+            <motion.div initial={{ scale: 0.8, y: 50 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0 }} className="card" style={{ width: '100%', maxWidth: 350, textAlign: 'center', padding: '30px 20px', backgroundColor: '#111218', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+              <h3 className="title-lg" style={{ color: 'var(--accent)', marginBottom: 8 }}>Got it!</h3>
+              <p className="body-sm" style={{ marginBottom: 24 }}>Your Web3 transfer has been successfully confirmed on the Sepolia network.</p>
+              <button className="btn btn-primary" onClick={() => setShowSuccessModal(false)} style={{ width: '100%' }}>Done</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

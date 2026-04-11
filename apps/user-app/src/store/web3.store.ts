@@ -14,7 +14,7 @@ interface Web3Store {
   disconnect: () => void;
 }
 
-const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://rpc2.sepolia.org';
+const RPC_URL = import.meta.env.VITE_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com';
 
 export const useWeb3Store = create<Web3Store>((set, get) => ({
   wallet: null,

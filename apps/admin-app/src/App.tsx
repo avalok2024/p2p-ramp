@@ -9,6 +9,7 @@ import OrdersPage          from './pages/OrdersPage';
 import UsersPage           from './pages/UsersPage';
 import MerchantsPage       from './pages/MerchantsPage';
 import AuditLogsPage       from './pages/AuditLogsPage';
+import WalletPage          from './pages/WalletPage';
 
 function RequireAdmin({ children }: { children: React.ReactNode }) {
   const token = useAdminStore((s: any) => s.token);
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/users"            element={<UsersPage />} />
         <Route path="/merchants"        element={<MerchantsPage />} />
         <Route path="/audit"            element={<AuditLogsPage />} />
+        <Route path="/wallet"           element={<WalletPage />} />
       </Route>
     </Routes>
   );

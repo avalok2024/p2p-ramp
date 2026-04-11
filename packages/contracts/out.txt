@@ -1,0 +1,21 @@
+◇ injected env (2) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:859
+    return new TSError(diagnosticText, diagnosticCodes, diagnostics);
+           ^
+TSError: ⨯ Unable to compile TypeScript:
+error TS5011: The common source directory of 'tsconfig.json' is './scripts'. The 'rootDir' setting must be explicitly set to this or another path to adjust your output's file layout.
+  Visit https://aka.ms/ts6 for migration information.
+
+    at createTSError (D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:859:12)
+    at reportTSError (D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:863:19)
+    at D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:1379:34
+    at Object.compile (D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:1458:13)
+    at Module.m._compile (D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:1617:30)
+    at node:internal/modules/cjs/loader:1708:10
+    at Object.require.extensions.<computed> [as .ts] (D:\Work\DEV TESTS\TESTS - 38\p2p-ramp\packages\contracts\node_modules\ts-node\src\index.ts:1621:12)
+    at Module.load (node:internal/modules/cjs/loader:1318:32)
+    at Function._load (node:internal/modules/cjs/loader:1128:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14) {
+  diagnosticCodes: [ 5011 ]
+}

@@ -9,6 +9,7 @@ const links = [
   { to: '/users',      label: 'Users',      icon: '👥' },
   { to: '/merchants',  label: 'Merchants',  icon: '🏪' },
   { to: '/audit',      label: 'Audit Logs', icon: '📜' },
+  { to: '/wallet',     label: 'Wallet',     icon: '💳' },
 ];
 
 export default function AdminLayout() {
