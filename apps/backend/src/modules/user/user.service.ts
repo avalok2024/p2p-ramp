@@ -15,7 +15,7 @@ export class UserService {
     return this.userRepo.findOneOrFail({ where: { id } });
   }
 
-  async updateProfile(id: string, data: Partial<Pick<User, 'displayName' | 'phone'>>) {
+  async updateProfile(id: string, data: Partial<Pick<User, 'displayName' | 'phone' | 'web3Address'>>) {
     await this.userRepo.update(id, data);
     return this.userRepo.findOneOrFail({ where: { id } });
   }

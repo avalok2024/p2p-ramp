@@ -32,12 +32,20 @@ export default function UsersPage() {
       <div style={{ overflowX: 'auto' }}>
         <table className="data-table">
           <thead>
-            <tr>{['Email','Role','KYC','Rating','Trades','Banned','Actions'].map(h => <th key={h}>{h}</th>)}</tr>
+            <tr>{['Email','Web3 Address','Role','KYC','Rating','Trades','Banned','Actions'].map(h => <th key={h}>{h}</th>)}</tr>
           </thead>
           <tbody>
             {users.map((u, i) => (
               <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                 <td>{u.email}</td>
+                <td>
+                  {u.web3Address ? (
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                       <span className="mono" style={{ fontSize: 13 }}>{u.web3Address.slice(0,6)}...{u.web3Address.slice(-4)}</span>
+                       <button onClick={() => { navigator.clipboard.writeText(u.web3Address); toast.success('Copied!'); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14 }}>📋</button>
+                     </div>
+                  ) : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Not Linked</span>}
+                </td>
                 <td><span className={`badge ${ROLE_CLR[u.role]||'badge-muted'}`}>{u.role}</span></td>
                 <td><span className={`badge ${KYC_CLR[u.kycStatus]||'badge-muted'}`}>{u.kycStatus}</span></td>
                 <td>⭐ {u.rating}</td>

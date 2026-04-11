@@ -14,11 +14,13 @@ export class RegisterDto {
   @IsOptional() @IsString()         displayName?: string;
   @IsOptional() @IsString()         phone?:       string;
   @IsOptional() @IsEnum(UserRole)   role?:        UserRole;
+  @IsOptional() @IsString()         web3Address?: string;
 }
 
 export class LoginDto {
   @IsEmail()    email:    string;
   @IsString()   password: string;
+  @IsOptional() @IsString() web3Address?: string;
 }
 
 @Injectable()
@@ -43,6 +45,7 @@ export class AuthService {
         phone:       dto.phone,
         role,
         merchantStatus: role === UserRole.MERCHANT ? 'PENDING' : null,
+        web3Address: dto.web3Address,
       }),
     );
 
@@ -60,6 +63,11 @@ export class AuthService {
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    if (dto.web3Address && dto.web3Address !== user.web3Address) {
+      user.web3Address = dto.web3Address;
+      await this.userRepo.save(user);
+    }
 
     const accessToken = this.signToken(user);
     return { accessToken, user: this.sanitize(user) };

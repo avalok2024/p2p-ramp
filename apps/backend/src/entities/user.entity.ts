@@ -45,6 +45,9 @@ export class User {
   @Column({ nullable: true })
   kycDocumentUrl: string;
 
+  @Column({ nullable: true })
+  web3Address: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

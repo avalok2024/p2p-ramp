@@ -34,6 +34,8 @@ export class MatchingService {
       .createQueryBuilder('ad')
       .leftJoinAndSelect('ad.merchant', 'merchant')
       .where('ad.isActive = true')
+      // Only match with fully-approved merchants
+      .andWhere('merchant.merchantStatus = :ms', { ms: 'ACTIVE' })
       .andWhere('ad.crypto = :crypto', { crypto })
       .andWhere('ad.minAmount <= :fiat', { fiat: fiatAmount })
       .andWhere('ad.maxAmount >= :fiat', { fiat: fiatAmount })

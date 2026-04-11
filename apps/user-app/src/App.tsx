@@ -1,5 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuthStore } from './store/auth.store';
+import { useWeb3Store } from './store/web3.store';
+import api from './api/client';
 import AppLayout      from './components/AppLayout';
 import LoginPage      from './pages/LoginPage';
 import RegisterPage   from './pages/RegisterPage';
@@ -18,6 +21,20 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const initWallet = useWeb3Store((s) => s.initWallet);
+  const address = useWeb3Store((s) => s.address);
+  const user = useAuthStore((s) => s.user);
+  
+  useEffect(() => {
+    initWallet();
+  }, [initWallet]);
+
+  useEffect(() => {
+    if (user && address) {
+      api.patch('/user/profile', { web3Address: address }).catch(() => {});
+    }
+  }, [user, address]);
+
   return (
     <Routes>
       {/* Public */}

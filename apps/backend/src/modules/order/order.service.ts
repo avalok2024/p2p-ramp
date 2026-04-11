@@ -116,7 +116,7 @@ export class OrderService {
 
   async listOrders(user: User, status?: OrderStatus) {
     const query = this.orderRepo.createQueryBuilder('o')
-      .where('(o.user_id = :uid OR o.merchant_id = :uid)', { uid: user.id });
+      .where('(o.userId = :uid OR o.merchantId = :uid)', { uid: user.id });
     if (status) query.andWhere('o.status = :status', { status });
     return query.orderBy('o.createdAt', 'DESC').limit(50).getMany();
   }

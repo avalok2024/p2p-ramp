@@ -1,5 +1,5 @@
 import {
-  Injectable, NotFoundException, ForbiddenException, BadRequestException,
+  Injectable, NotFoundException, ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,7 +8,7 @@ import { User }        from '../../entities/user.entity';
 import { UserRole, CryptoAsset, PaymentMethod } from '../../../../../packages/shared/src';
 import {
   IsEnum, IsNumber, IsArray, IsOptional, IsString,
-  IsBoolean, Min, Max, IsUrl,
+  Min, Max,
 } from 'class-validator';
 
 export class CreateAdDto {
@@ -28,7 +28,8 @@ export class CreateAdDto {
 @Injectable()
 export class MerchantService {
   constructor(
-    @InjectRepository(MerchantAd) private adRepo: Repository<MerchantAd>,
+    @InjectRepository(MerchantAd) private adRepo:    Repository<MerchantAd>,
+    @InjectRepository(User)       private userRepo:  Repository<User>,
   ) {}
 
   async createAd(merchant: User, dto: CreateAdDto) {
@@ -49,7 +50,9 @@ export class MerchantService {
   async getActiveAds(crypto?: CryptoAsset) {
     const query = this.adRepo.createQueryBuilder('ad')
       .leftJoinAndSelect('ad.merchant', 'merchant')
-      .where('ad.isActive = true');
+      .where('ad.isActive = true')
+      // Only show ads from fully-approved merchants
+      .andWhere('merchant.merchantStatus = :ms', { ms: 'ACTIVE' });
     if (crypto) query.andWhere('ad.crypto = :crypto', { crypto });
     query.orderBy('ad.pricePerUnit', 'ASC');
     return query.getMany();

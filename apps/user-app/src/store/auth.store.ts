@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../api/client';
+import { useWeb3Store } from './web3.store';
 
 export interface AuthUser {
   id: string;
@@ -30,7 +31,8 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password) => {
         set({ isLoading: true });
         try {
-          const res = await api.post('/auth/login', { email, password });
+          const web3Address = useWeb3Store.getState().address;
+          const res = await api.post('/auth/login', { email, password, web3Address });
           const { accessToken, user } = res.data;
           localStorage.setItem('rampx_token', accessToken);
           set({ token: accessToken, user });
@@ -42,7 +44,8 @@ export const useAuthStore = create<AuthState>()(
       register: async (data) => {
         set({ isLoading: true });
         try {
-          const res = await api.post('/auth/register', data);
+          const web3Address = useWeb3Store.getState().address;
+          const res = await api.post('/auth/register', { ...data, web3Address });
           const { accessToken, user } = res.data;
           localStorage.setItem('rampx_token', accessToken);
           set({ token: accessToken, user });

@@ -64,7 +64,7 @@ export default function MerchantsPage() {
         <table className="data-table">
           <thead>
             <tr>
-              {['Name','Email','Status','Active Ads','Volume (₹)','Rating','Trades','Actions'].map(h => (
+              {['Name','Email','Web3 Address','Status','Active Ads','Volume (₹)','Rating','Trades','Actions'].map(h => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
@@ -88,6 +88,14 @@ export default function MerchantsPage() {
                   </div>
                 </td>
                 <td style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{m.email}</td>
+                <td>
+                  {m.web3Address ? (
+                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                       <span className="mono" style={{ fontSize: 13 }}>{m.web3Address.slice(0,6)}...{m.web3Address.slice(-4)}</span>
+                       <button onClick={() => { navigator.clipboard.writeText(m.web3Address); toast.success('Copied!'); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14 }}>📋</button>
+                     </div>
+                  ) : <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>Not Linked</span>}
+                </td>
                 <td>
                   <span className={`badge ${STATUS_CLR[m.merchantStatus] || 'badge-muted'}`}>
                     {m.merchantStatus || 'ACTIVE'}

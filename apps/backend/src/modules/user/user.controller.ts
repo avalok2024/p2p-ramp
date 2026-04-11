@@ -10,6 +10,7 @@ class UpdateProfileDto {
   @IsOptional() @IsString() displayName?: string;
   @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsString() avatarUrl?: string;
+  @IsOptional() @IsString() web3Address?: string;
 }
 
 @ApiTags('User')

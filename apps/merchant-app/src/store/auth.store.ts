@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../api/client';
+import { useWeb3Store } from './web3.store';
 
 interface MerchantAuthState {
   user: any; token: string | null; isLoading: boolean;
@@ -16,7 +17,8 @@ export const useAuthStore = create<MerchantAuthState>()(
       login: async (email, password) => {
         set({ isLoading: true });
         try {
-          const r = await api.post('/auth/login', { email, password });
+          const web3Address = useWeb3Store.getState().address;
+          const r = await api.post('/auth/login', { email, password, web3Address });
           localStorage.setItem('rampx_merchant_token', r.data.accessToken);
           set({ token: r.data.accessToken, user: r.data.user });
         } finally { set({ isLoading: false }); }
@@ -24,7 +26,8 @@ export const useAuthStore = create<MerchantAuthState>()(
       register: async (data) => {
         set({ isLoading: true });
         try {
-          const r = await api.post('/auth/register', { ...data, role: 'MERCHANT' });
+          const web3Address = useWeb3Store.getState().address;
+          const r = await api.post('/auth/register', { ...data, role: 'MERCHANT', web3Address });
           localStorage.setItem('rampx_merchant_token', r.data.accessToken);
           set({ token: r.data.accessToken, user: r.data.user });
         } finally { set({ isLoading: false }); }
