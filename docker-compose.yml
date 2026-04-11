@@ -1,0 +1,53 @@
+# RampX local stack — from repo root: `npm run db:up`
+# Requires Docker Desktop (Windows/Mac) or Docker Engine (Linux).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: p2p_ramp_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: p2p_ramp
+      POSTGRES_USER: ramp_user
+      POSTGRES_PASSWORD: ramp_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ramp_user -d p2p_ramp"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
+
+  redis:
+    image: redis:7-alpine
+    container_name: p2p_ramp_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    profiles:
+      - full
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: p2p_ramp_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@p2pramp.dev
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+  redis_data:
