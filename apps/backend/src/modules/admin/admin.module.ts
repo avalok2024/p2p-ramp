@@ -7,9 +7,10 @@ import { Order }    from '../../entities/order.entity';
 import { Dispute }  from '../../entities/dispute.entity';
 import { AuditLog } from '../../entities/audit-log.entity';
 import { MerchantAd } from '../../entities/merchant-ad.entity';
+import { EscrowModule } from '../escrow/escrow.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Order, Dispute, AuditLog, MerchantAd])],
+  imports: [TypeOrmModule.forFeature([User, Order, Dispute, AuditLog, MerchantAd]), EscrowModule],
   controllers: [AdminController],
   providers: [AdminService],
 })

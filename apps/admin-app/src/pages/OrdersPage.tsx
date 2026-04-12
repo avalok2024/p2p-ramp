@@ -8,6 +8,7 @@ const sColor: Record<string, string> = { COMPLETED:'badge-green', ESCROW_LOCKED:
 export default function OrdersPage() {
   const [orders, setOrders]   = useState<any[]>([]);
   const [filter, setFilter]   = useState('');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     api.get('/admin/orders').then((r) => setOrders(adminItems(r)));
@@ -34,7 +35,14 @@ export default function OrdersPage() {
               <motion.tr key={o.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                 <td style={{ fontWeight: 700 }}>{o.orderNumber ?? '—'}</td>
                 <td className="mono" style={{ fontSize: 12 }}>{o.referenceCode}</td>
-                <td className="mono" style={{ fontSize: 10, color: 'var(--text-muted)' }} title={o.id}>{(o.id || '').slice(0, 8)}…</td>
+                <td className="mono" style={{ fontSize: 11, color: copiedId === o.id ? '#48bb78' : 'var(--accent)', cursor: 'pointer', textDecoration: copiedId === o.id ? 'none' : 'underline' }} title="Click to copy full UUID" onClick={() => { 
+                  navigator.clipboard.writeText(o.id); 
+                  setCopiedId(o.id);
+                  toast.success('Copied UUID to clipboard!'); 
+                  setTimeout(() => setCopiedId(null), 2000);
+                }}>
+                  {copiedId === o.id ? '✅ Copied!' : (o.id || '').slice(0, 8) + '…'}
+                </td>
                 <td><span className="badge badge-muted">{o.type}</span></td>
                 <td>{o.cryptoAmount} {o.crypto}</td>
                 <td>₹{parseFloat('' + o.fiatAmount).toLocaleString()}</td>

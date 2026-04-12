@@ -19,6 +19,7 @@ export default function WalletPage() {
   const [sendAmount, setSendAmount] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isUsdtMode, setIsUsdtMode] = useState(false);
 
   useEffect(() => { fetchWallets(); fetchTransactions(); }, []);
 
@@ -28,9 +29,13 @@ export default function WalletPage() {
     if (!sendAddress || !sendAmount) return toast.error('Fill all fields');
     try {
       setSendLoading(true);
+      const finalEthAmount = isUsdtMode && parseFloat(sendAmount) > 0
+        ? (parseFloat(sendAmount) / 3000).toFixed(8)
+        : sendAmount;
+
       const tx = await wallet.sendTransaction({
         to: sendAddress,
-        value: ethers.parseEther(sendAmount)
+        value: ethers.parseEther(finalEthAmount.toString())
       });
       toast.success('Transaction sent! Waiting...');
       await tx.wait();
@@ -235,13 +240,16 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <label className="label" style={{ margin: 0 }}>Amount (ETH)</label>
-                    <button type="button" onClick={() => setSendAmount(balanceEth)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>MAX</button>
+                    <label className="label" style={{ margin: 0 }}>
+                      Amount ({isUsdtMode ? 'USDT' : 'ETH'})
+                      {sendAmount && <span style={{ color: 'var(--accent)', marginLeft: 8, fontSize: 10 }}>≈ {isUsdtMode ? (parseFloat(sendAmount) / 3000).toFixed(4) + ' ETH' : (parseFloat(sendAmount) * 3000).toFixed(2) + ' USDT'}</span>}
+                    </label>
+                    <button type="button" onClick={() => setSendAmount(isUsdtMode ? (parseFloat(balanceEth) * 3000).toFixed(2) : balanceEth)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>MAX</button>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input type="number" className="input" placeholder="0.0" step="0.0001" value={sendAmount} onChange={e => setSendAmount(e.target.value)} required disabled={sendLoading} style={{ flex: 1 }} />
-                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => toast('Currency converter preview coming soon!')} title="Swap Currency">
-                      ⇌ ETH
+                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => { setIsUsdtMode(!isUsdtMode); setSendAmount(''); }} title="Swap Currency">
+                      ⇌ {isUsdtMode ? 'USDT' : 'ETH'}
                     </button>
                   </div>
                 </div>

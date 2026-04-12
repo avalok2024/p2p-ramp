@@ -91,4 +91,10 @@ export class AdminController {
   getAuditLogs(@Query('page') page = 1, @Query('limit') limit = 50) {
     return this.adminService.getAuditLogs(+page, +limit);
   }
+
+  @Post('escrow/:orderId/force-release')
+  @ApiOperation({ summary: 'Forcefully release escrow funds to buyer' })
+  forceReleaseEscrow(@Param('orderId') orderId: string, @CurrentUser() admin: User) {
+    return this.adminService.forceReleaseEscrow(orderId, admin.id);
+  }
 }

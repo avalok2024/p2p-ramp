@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { useWeb3Store } from '../store/web3.store';
 import { ethers } from 'ethers';
 import { QRCodeCanvas } from 'qrcode.react';
+import api from '../api/client';
 
 export default function WalletPage() {
   const { wallet, address, balanceEth, isUnlocked, hasStoredWallet, generateNewWallet, unlockWallet, lockWallet, initWallet, fetchBalance } = useWeb3Store();
@@ -18,9 +19,23 @@ export default function WalletPage() {
   const [sendAmount, setSendAmount] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isUsdtMode, setIsUsdtMode] = useState(false);
+  
+  const [showForceReleaseModal, setShowForceReleaseModal] = useState(false);
+  const [forceReleaseOrderId, setForceReleaseOrderId] = useState('');
+  
+  const [dbWallets, setDbWallets] = useState<any[]>([]);
+
+  const fetchDbWallets = async () => {
+    try {
+      const res = await api.get('/wallet');
+      setDbWallets(res.data);
+    } catch(e) {}
+  };
 
   useEffect(() => {
     initWallet();
+    fetchDbWallets();
   }, [initWallet]);
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -52,9 +67,13 @@ export default function WalletPage() {
     if (!sendAddress || !sendAmount) return toast.error('Fill all fields');
     try {
       setSendLoading(true);
+      const finalEthAmount = isUsdtMode && parseFloat(sendAmount) > 0
+        ? (parseFloat(sendAmount) / 3000).toFixed(8)
+        : sendAmount;
+
       const tx = await wallet.sendTransaction({
         to: sendAddress,
-        value: ethers.parseEther(sendAmount)
+        value: ethers.parseEther(finalEthAmount.toString())
       });
       toast.success('Transaction sent! Waiting...');
       await tx.wait();
@@ -175,8 +194,10 @@ export default function WalletPage() {
                   <h3 className="title-md" style={{ margin: '4px 0 0 0', fontFamily: 'monospace' }}>{balanceEth} ETH</h3>
                   <p className="body-sm" style={{ margin: '2px 0 12px 0', color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Available for gas fees</p>
                   
-                  <p className="label" style={{ margin: 0, fontSize: 10 }}>MockUSDT Balance:</p>
-                  <h3 className="title-md" style={{ margin: '4px 0 0 0', fontFamily: 'monospace' }}>0.0000 USDT</h3>
+                  <p className="label" style={{ margin: 0, fontSize: 10 }}>MockUSDT Balance (Platform):</p>
+                  <h3 className="title-md" style={{ margin: '4px 0 0 0', fontFamily: 'monospace' }}>
+                    {parseFloat(dbWallets.find(w => w.crypto === 'USDT')?.availableBalance || '0').toFixed(4)} USDT
+                  </h3>
                   <p className="body-sm" style={{ margin: '2px 0 0 0', color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Available for testing transactions</p>
                 </div>
               </div>
@@ -203,7 +224,16 @@ export default function WalletPage() {
                      <p style={{ margin: '0 0 4px 0', fontSize: 13, fontWeight: 600 }}>💧 Mint MockUSDT</p>
                      <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Generate test USDT tokens directly into the admin wallet for simulation and testing purposes.</p>
                    </div>
-                   <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => toast('Mint logic not linked yet.')}>Mint Tokens</button>
+                   <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={async () => {
+                     try {
+                       await api.post('/wallet/deposit', { crypto: 'USDT', amount: 1000 });
+                       toast.success('Generated 1,000 MockUSDT in Admin Wallet!');
+                       if (fetchBalance) fetchBalance();
+                       fetchDbWallets();
+                     } catch(e:any) {
+                       toast.error('Failed to mint MockUSDT');
+                     }
+                   }}>Mint Tokens</button>
                  </div>
 
                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }} />
@@ -213,7 +243,7 @@ export default function WalletPage() {
                      <p style={{ margin: '0 0 4px 0', fontSize: 13, fontWeight: 600 }}>🔑 Force Release</p>
                      <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Manually release locked funds from escrow in case of disputes or system issues. This action overrides standard contract conditions.</p>
                    </div>
-                   <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => toast('Release logic not linked yet.')}>Force Release</button>
+                   <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => setShowForceReleaseModal(true)}>Force Release</button>
                  </div>
                </div>
             </div>
@@ -257,13 +287,16 @@ export default function WalletPage() {
                 </div>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <label className="label" style={{ margin: 0 }}>Amount (ETH)</label>
-                    <button type="button" onClick={() => setSendAmount(balanceEth)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>MAX</button>
+                    <label className="label" style={{ margin: 0 }}>
+                      Amount ({isUsdtMode ? 'USDT' : 'ETH'})
+                      {sendAmount && <span style={{ color: 'var(--accent)', marginLeft: 8, fontSize: 10 }}>≈ {isUsdtMode ? (parseFloat(sendAmount) / 3000).toFixed(4) + ' ETH' : (parseFloat(sendAmount) * 3000).toFixed(2) + ' USDT'}</span>}
+                    </label>
+                    <button type="button" onClick={() => setSendAmount(isUsdtMode ? (parseFloat(balanceEth) * 3000).toFixed(2) : balanceEth)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>MAX</button>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input type="number" className="input" placeholder="0.0" step="0.0001" value={sendAmount} onChange={e => setSendAmount(e.target.value)} required disabled={sendLoading} style={{ flex: 1 }} />
-                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => toast('Currency converter preview coming soon!')} title="Swap Currency">
-                      ⇌ ETH
+                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => { setIsUsdtMode(!isUsdtMode); setSendAmount(''); }} title="Swap Currency">
+                      ⇌ {isUsdtMode ? 'USDT' : 'ETH'}
                     </button>
                   </div>
                 </div>
@@ -311,6 +344,37 @@ export default function WalletPage() {
               <h3 className="title-lg" style={{ color: 'var(--accent)', marginBottom: 8 }}>Got it!</h3>
               <p className="body-sm" style={{ marginBottom: 24 }}>Your Web3 transfer has been successfully confirmed on the Sepolia network.</p>
               <button className="btn btn-primary" onClick={() => setShowSuccessModal(false)} style={{ width: '100%' }}>Done</button>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Force Release Modal */}
+        {showForceReleaseModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          >
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="card" style={{ width: '100%', maxWidth: 400, backgroundColor: '#111218', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 className="title-md" style={{ margin: 0, color: '#ff6b6b' }}>🔑 Force Release</h3>
+                <button onClick={() => setShowForceReleaseModal(false)} style={{ background: 'transparent', border: 'none', color: 'white', fontSize: 20, cursor: 'pointer' }}>✕</button>
+              </div>
+              <p className="body-sm" style={{ marginBottom: 16 }}>Enter the Order ID to forcefully release locked Escrow funds to the Buyer.</p>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if(!forceReleaseOrderId) return;
+                try {
+                  await api.post(`/admin/escrow/${forceReleaseOrderId}/force-release`);
+                  toast.success('Funds successfully forced completely directly to Buyer!');
+                  setShowForceReleaseModal(false);
+                  setForceReleaseOrderId('');
+                } catch(e:any) {
+                  toast.error(e.response?.data?.message || 'Failed to force release');
+                }
+              }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <input type="text" className="input" placeholder="e.g. 1a2b3c..." value={forceReleaseOrderId} onChange={e => setForceReleaseOrderId(e.target.value)} required />
+                <button type="submit" className="btn btn-primary" style={{ background: '#ff6b6b' }}>Confirm Force Release</button>
+              </form>
             </motion.div>
           </motion.div>
         )}

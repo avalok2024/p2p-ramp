@@ -9,6 +9,7 @@ import { MerchantAd } from '../../entities/merchant-ad.entity';
 import {
   UserRole, KycStatus, OrderStatus, DisputeStatus,
 } from '../../../../../packages/shared/src';
+import { EscrowService } from '../escrow/escrow.service';
 
 export type Paged<T> = { items: T[]; total: number };
 
@@ -25,6 +26,7 @@ export class AdminService {
     @InjectRepository(Dispute)    private disputeRepo: Repository<Dispute>,
     @InjectRepository(AuditLog)   private auditRepo:   Repository<AuditLog>,
     @InjectRepository(MerchantAd) private adRepo:      Repository<MerchantAd>,
+    private escrowService: EscrowService,
   ) {}
 
   async getDashboardStats() {
@@ -214,5 +216,16 @@ export class AdminService {
 
   private async logAudit(actorId: string, action: string, entity: string, entityId: string) {
     await this.auditRepo.save(this.auditRepo.create({ actorId, action, entity, entityId }));
+  }
+
+  async forceReleaseEscrow(orderId: string, adminId: string) {
+    const order = await this.orderRepo.findOne({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('Order not found');
+
+    // Force release to the buyer (userId)
+    const escrow = await this.escrowService.adminRelease(orderId, order.userId, adminId);
+    
+    await this.logAudit(adminId, 'ESCROW_FORCE_RELEASED', 'Order', orderId);
+    return { message: 'Funds successfully forced completely directly to Buyer!', escrow };
   }
 }
