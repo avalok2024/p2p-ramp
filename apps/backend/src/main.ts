@@ -7,33 +7,39 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ── CORS ──────────────────────────────────────────────────────────────────
-  // FRONTEND_URLS = comma-separated list of allowed origins (set in Railway env).
-  // Falls back to localhost ports for local development.
-  const prodOrigins = (process.env.FRONTEND_URLS || '')
-    .split(',')
-    .map((u) => u.trim())
-    .filter(Boolean);
-
-  const devOrigins = [
+  // FRONTEND_URLS: comma-separated exact origins set in Railway env vars.
+  // Vercel apps (*.vercel.app) are always allowed so you don't need to
+  // redeploy every time a preview URL changes.
+  const exactAllowed = new Set([
+    // localhost dev ports
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5175',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
-  ];
-
-  const allowedOrigins = [...devOrigins, ...prodOrigins];
+    // Production origins from Railway env (comma-separated)
+    ...(process.env.FRONTEND_URLS || '')
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean),
+  ]);
 
   app.enableCors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // server-to-server / curl
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      const re = /^https?:\/\/(localhost|127\.0\.0\.1):(5173|5174|5175)$/;
-      if (re.test(origin)) return cb(null, true);
+      // Allow server-to-server / Swagger / curl (no Origin header)
+      if (!origin) return cb(null, true);
+      // Exact match
+      if (exactAllowed.has(origin)) return cb(null, true);
+      // Any Vercel deployment (production + preview URLs)
+      if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return cb(null, true);
+      // Localhost regex fallback
+      if (/^https?:\/\/(localhost|127\.0\.0\.1):(5173|5174|5175)$/.test(origin)) return cb(null, true);
       return cb(null, false);
     },
     credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization',
   });
 
   // ── Global prefix ────────────────────────────────────────────────────────
