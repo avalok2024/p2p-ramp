@@ -2,23 +2,32 @@
   "name": "p2p-ramp",
   "version": "1.0.0",
   "private": true,
-  "description": "P2P Crypto On/Off Ramp — Escrow-secured fiat↔crypto trading platform",
+  "packageManager": "pnpm@8.15.0",
+
   "scripts": {
+    "start": "pnpm --filter backend start",
+    "build": "pnpm --filter backend build",
+
     "dev:backend": "pnpm --filter backend dev",
     "dev:user": "pnpm --filter user-app dev",
     "dev:merchant": "pnpm --filter merchant-app dev",
     "dev:admin": "pnpm --filter admin-app dev",
+
     "build:all": "pnpm --filter backend build && pnpm --filter user-app build && pnpm --filter merchant-app build && pnpm --filter admin-app build",
+
     "install:all": "pnpm install",
+
     "db:up": "docker compose up -d postgres",
     "db:up:full": "docker compose --profile full up -d",
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f postgres",
+
     "docker:up": "docker compose up -d postgres",
     "docker:down": "docker compose down",
     "docker:up:legacy": "docker-compose up -d postgres",
     "docker:down:legacy": "docker-compose down"
   },
+
   "devDependencies": {
     "typescript": "^5.3.3"
   },
