@@ -7,6 +7,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ── CORS ──────────────────────────────────────────────────────────────────
+  // FRONTEND_URLS = comma-separated list of allowed origins (set in Railway env).
+  // Falls back to localhost ports for local development.
+  const prodOrigins = (process.env.FRONTEND_URLS || '')
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
+
   const devOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
@@ -15,10 +22,13 @@ async function bootstrap() {
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
   ];
+
+  const allowedOrigins = [...devOrigins, ...prodOrigins];
+
   app.enableCors({
     origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
-      if (devOrigins.includes(origin)) return cb(null, true);
+      if (!origin) return cb(null, true); // server-to-server / curl
+      if (allowedOrigins.includes(origin)) return cb(null, true);
       const re = /^https?:\/\/(localhost|127\.0\.0\.1):(5173|5174|5175)$/;
       if (re.test(origin)) return cb(null, true);
       return cb(null, false);
