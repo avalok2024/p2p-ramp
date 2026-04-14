@@ -56,6 +56,8 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         localStorage.removeItem('rampx_token');
+        localStorage.removeItem('embedded_wallet_key');
+        useWeb3Store.getState().generateNewWallet();
         set({ user: null, token: null });
       },
     }),

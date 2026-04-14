@@ -31,9 +31,6 @@ export enum OrderType {
 }
 
 export enum CryptoAsset {
-  USDT = 'USDT',
-  USDC = 'USDC',
-  BTC  = 'BTC',
   ETH  = 'ETH',
 }
 
@@ -45,6 +42,7 @@ export enum PaymentMethod {
 }
 
 export enum EscrowStatus {
+  PENDING  = 'PENDING',
   LOCKED   = 'LOCKED',
   RELEASED = 'RELEASED',
   REFUNDED = 'REFUNDED',

@@ -13,6 +13,11 @@ class UpdateProfileDto {
   @IsOptional() @IsString() web3Address?: string;
 }
 
+class ChangePasswordDto {
+  @IsString() currentPass: string;
+  @IsString() newPass: string;
+}
+
 @ApiTags('User')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -33,5 +38,10 @@ export class UserController {
   @Get('stats')
   getStats(@CurrentUser() user: User) {
     return this.userService.getStats(user.id);
+  }
+
+  @Patch('password')
+  changePassword(@CurrentUser() user: User, @Body() dto: ChangePasswordDto) {
+    return this.userService.changePassword(user.id, dto.currentPass, dto.newPass);
   }
 }

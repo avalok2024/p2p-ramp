@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../api/client';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 const METHODS = ['UPI','IMPS','NEFT','BANK_TRANSFER'];
 
 export default function CreateAdPage() {
   const navigate = useNavigate();
+  const { formatEth, symbol } = useFormatCurrency();
   const [form, setForm] = useState({
-    crypto: 'USDT', pricePerUnit: '', minAmount: '', maxAmount: '',
+    crypto: 'ETH', pricePerUnit: '', minAmount: '', maxAmount: '',
     paymentMethods: ['UPI'], upiId: '', paymentRemarks: '', paymentWindowMinutes: 30,
   });
   const [loading, setLoading] = useState(false);
@@ -27,9 +29,10 @@ export default function CreateAdPage() {
     if (parseFloat(form.minAmount) >= parseFloat(form.maxAmount)) return toast.error('Min must be less than Max');
     setLoading(true);
     try {
+      const rateToEth = formatEth(1).rate;
       await api.post('/merchants/ads', {
         ...form,
-        pricePerUnit: parseFloat(form.pricePerUnit),
+        pricePerUnit: parseFloat(form.pricePerUnit) * rateToEth,
         minAmount:    parseFloat(form.minAmount),
         maxAmount:    parseFloat(form.maxAmount),
         paymentWindowMinutes: +form.paymentWindowMinutes,
@@ -53,7 +56,7 @@ export default function CreateAdPage() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p className="label">Pricing</p>
           {[
-            { id: 'price',  key: 'pricePerUnit', label: 'Price per USDT (₹)', ph: 'e.g. 85.50' },
+            { id: 'price',  key: 'pricePerUnit', label: `Price per ${symbol} (₹)`, ph: symbol === 'USDT' ? 'e.g. 85.50' : 'e.g. 300000' },
             { id: 'min',    key: 'minAmount',    label: 'Min Order (₹)',        ph: 'e.g. 500'   },
             { id: 'max',    key: 'maxAmount',    label: 'Max Order (₹)',        ph: 'e.g. 50000' },
           ].map(f => (
@@ -80,7 +83,7 @@ export default function CreateAdPage() {
           </div>
           <div className="input-group">
             <label className="input-label">Payment Remarks (optional)</label>
-            <input type="text" className="input" placeholder="e.g. USDT Purchase" value={form.paymentRemarks} onChange={set('paymentRemarks')} />
+            <input type="text" className="input" placeholder="e.g. ETH Purchase" value={form.paymentRemarks} onChange={set('paymentRemarks')} />
           </div>
           <div className="input-group">
             <label className="input-label">Payment Window (minutes)</label>

@@ -7,11 +7,6 @@ import { User }          from '../../entities/user.entity';
 import { CryptoAsset }   from '../../../../../packages/shared/src';
 import { IsEnum, IsNumber, Min } from 'class-validator';
 
-class DepositDto {
-  @IsEnum(CryptoAsset) crypto: CryptoAsset;
-  @IsNumber() @Min(0.00000001) amount: number;
-}
-
 @ApiTags('Wallet')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -32,11 +27,5 @@ export class WalletController {
     @Query('crypto') crypto?: CryptoAsset,
   ) {
     return this.walletService.getTransactions(user.id, crypto);
-  }
-
-  @Post('deposit')
-  @ApiOperation({ summary: '[MVP] Simulate a crypto deposit' })
-  deposit(@CurrentUser() user: User, @Body() dto: DepositDto) {
-    return this.walletService.deposit(user.id, dto.crypto, dto.amount);
   }
 }

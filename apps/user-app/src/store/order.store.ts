@@ -4,11 +4,42 @@ import api from '../api/client';
 export interface Order {
   id: string;
   orderNumber?: number;
-  type: string; status: string; crypto: string;
-  fiatAmount: number; cryptoAmount: number; uniqueFiatAmount: number;
-  referenceCode: string; paymentDeadline: string;
-  upiQr?: string; merchantAd?: any; merchant?: any;
-  paidMarkedAt?: string; confirmedAt?: string;
+  type: string;
+  status: string;
+  crypto: string;
+  fiatAmount: number;
+  cryptoAmount: number;
+  uniqueFiatAmount: number;
+  pricePerUnit: number;
+  paymentMethod: string;
+  referenceCode: string;
+  paymentDeadline: string;
+  /** Set on SELL orders — the user's UPI ID the merchant pays fiat to */
+  userUpiId?: string | null;
+  /** UPI QR string built server-side for the payment screen */
+  upiQr?: string | null;
+  paymentProofUrl?: string | null;
+  paidMarkedAt?: string | null;
+  confirmedAt?: string | null;
+  cancelledAt?: string | null;
+  /** P2PEscrow contract address on Sepolia (mirrored from backend ESCROW_CONTRACT_ADDRESS) */
+  escrowContractAddress?: string;
+  /** Sepolia RPC URL the server uses (shared with frontends for consistency) */
+  web3RpcUrl?: string;
+  merchant?: { id: string; displayName?: string; web3Address?: string; [k: string]: any };
+  user?: { id: string; displayName?: string; web3Address?: string; [k: string]: any };
+  merchantAd?: any;
+  escrow?: any;
+  dispute?: any;
+}
+
+export interface CreateOrderPayload {
+  type: string;
+  crypto: string;
+  fiatAmount: number;
+  adId: string;
+  /** Required on SELL orders so the merchant's QR screen shows the user's UPI ID */
+  userUpiId?: string;
 }
 
 interface OrderState {
@@ -17,7 +48,7 @@ interface OrderState {
   isLoading: boolean;
   fetchOrders: () => Promise<void>;
   fetchOrder: (id: string) => Promise<Order>;
-  createOrder: (data: { type: string; crypto: string; fiatAmount: number; adId: string }) => Promise<Order>;
+  createOrder: (data: CreateOrderPayload) => Promise<Order>;
   markPaid: (id: string, paymentProofUrl?: string) => Promise<Order>;
   confirmPayment: (id: string) => Promise<Order>;
   cancelOrder: (id: string) => Promise<Order>;

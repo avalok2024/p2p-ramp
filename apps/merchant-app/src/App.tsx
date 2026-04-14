@@ -12,7 +12,6 @@ import OrdersPage          from './pages/OrdersPage';
 import OrderDetailPage     from './pages/OrderDetailPage';
 import WalletPage          from './pages/WalletPage';
 import EarningsPage        from './pages/EarningsPage';
-import SettingsPage        from './pages/SettingsPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -45,7 +44,6 @@ export default function App() {
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
         <Route path="/wallet"     element={<WalletPage />} />
         <Route path="/earnings"   element={<EarningsPage />} />
-        <Route path="/settings"   element={<SettingsPage />} />
       </Route>
     </Routes>
   );

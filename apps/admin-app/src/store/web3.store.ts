@@ -7,7 +7,7 @@ import { ethers } from 'ethers';
 // mock AES or just let ethers do it (but limit the scrypt param for speed).
 
 interface Web3Store {
-  wallet: ethers.Wallet | null;
+  wallet: any | null;
   address: string | null;
   balanceEth: string;
   isUnlocked: boolean;

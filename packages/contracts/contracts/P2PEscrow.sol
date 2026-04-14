@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract P2PEscrow is Ownable {
-    IERC20 public usdt;
-
     enum EscrowStatus { NONE, LOCKED, RELEASED, REFUNDED }
 
     struct Escrow {
@@ -23,29 +20,25 @@ contract P2PEscrow is Ownable {
     event EscrowReleased(bytes32 indexed orderId, address indexed recipient, uint256 amount);
     event EscrowRefunded(bytes32 indexed orderId, address indexed depositor, uint256 amount);
 
-    constructor(address _usdtAddress) Ownable(msg.sender) {
-        usdt = IERC20(_usdtAddress);
-    }
+    constructor() Ownable(msg.sender) {}
 
     /**
      * @dev Depositor locks funds for a specific off-chain order.
-     * Depositor must have approved the contract to spend the amount.
+     * Depositor must supply the exact ETH via msg.value.
      */
-    function deposit(bytes32 orderId, uint256 amount, address recipient) external {
+    function deposit(bytes32 orderId, address recipient) external payable {
         require(escrows[orderId].status == EscrowStatus.NONE, "Escrow already exists");
-        require(amount > 0, "Amount must be greater than 0");
+        require(msg.value > 0, "Amount must be greater than 0");
         require(recipient != address(0), "Invalid recipient");
 
         escrows[orderId] = Escrow({
-            amount: amount,
+            amount: msg.value,
             depositor: msg.sender,
             intendedRecipient: recipient,
             status: EscrowStatus.LOCKED
         });
 
-        require(usdt.transferFrom(msg.sender, address(this), amount), "Transfer failed");
-
-        emit EscrowLocked(orderId, msg.sender, recipient, amount);
+        emit EscrowLocked(orderId, msg.sender, recipient, msg.value);
     }
 
     /**
@@ -59,7 +52,9 @@ contract P2PEscrow is Ownable {
         require(msg.sender == esc.depositor || msg.sender == owner(), "Not authorized");
 
         esc.status = EscrowStatus.RELEASED;
-        require(usdt.transfer(esc.intendedRecipient, esc.amount), "Transfer failed");
+        
+        (bool success, ) = payable(esc.intendedRecipient).call{value: esc.amount}("");
+        require(success, "Transfer failed");
 
         emit EscrowReleased(orderId, esc.intendedRecipient, esc.amount);
     }
@@ -75,7 +70,9 @@ contract P2PEscrow is Ownable {
         require(msg.sender == esc.intendedRecipient || msg.sender == owner(), "Not authorized");
 
         esc.status = EscrowStatus.REFUNDED;
-        require(usdt.transfer(esc.depositor, esc.amount), "Transfer failed");
+        
+        (bool success, ) = payable(esc.depositor).call{value: esc.amount}("");
+        require(success, "Transfer failed");
 
         emit EscrowRefunded(orderId, esc.depositor, esc.amount);
     }

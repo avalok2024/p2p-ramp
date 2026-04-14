@@ -5,13 +5,13 @@ import { ethers } from 'ethers';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useWalletStore } from '../store/wallet.store';
 import { useWeb3Store } from '../store/web3.store';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 export default function WalletPage() {
-  const { wallets, transactions, fetchWallets, fetchTransactions, deposit } = useWalletStore();
-  const [depositAmt, setDepAmt] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { transactions, fetchTransactions } = useWalletStore();
 
   const { address, balanceEth, wallet, fetchBalance } = useWeb3Store();
+  const { formatEth, symbol } = useFormatCurrency();
 
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
@@ -19,9 +19,9 @@ export default function WalletPage() {
   const [sendAmount, setSendAmount] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isUsdtMode, setIsUsdtMode] = useState(false);
+  const [isUsdcMode, setIsUsdcMode] = useState(false);
 
-  useEffect(() => { fetchWallets(); fetchTransactions(); }, []);
+  useEffect(() => { fetchTransactions(); }, []);
 
   const handleSendEth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +29,7 @@ export default function WalletPage() {
     if (!sendAddress || !sendAmount) return toast.error('Fill all fields');
     try {
       setSendLoading(true);
-      const finalEthAmount = isUsdtMode && parseFloat(sendAmount) > 0
+      const finalEthAmount = isUsdcMode && parseFloat(sendAmount) > 0
         ? (parseFloat(sendAmount) / 3000).toFixed(8)
         : sendAmount;
 
@@ -51,19 +51,6 @@ export default function WalletPage() {
     }
   };
 
-  const handleDeposit = async () => {
-    const amt = parseFloat(depositAmt);
-    if (!amt || amt <= 0) return toast.error('Enter valid amount');
-    setLoading(true);
-    try {
-      await deposit('USDT', amt);
-      await fetchWallets();
-      toast.success(`${amt} USDT deposited ✅`);
-      setDepAmt('');
-    } catch (e: any) { toast.error(e.response?.data?.message || 'Failed'); }
-    finally { setLoading(false); }
-  };
-
   const copyToClipboard = () => {
     if (address) {
       navigator.clipboard.writeText(address);
@@ -76,21 +63,10 @@ export default function WalletPage() {
     ESCROW_RELEASE: '🔓', ESCROW_REFUND: '↩️', TRADE_CREDIT: '✅', TRADE_DEBIT: '📤',
   };
 
-  const usdt = wallets.find(w => w.crypto === 'USDT');
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h1 className="title-lg">Wallet</h1>
 
-      {usdt && (
-        <motion.div className="card card-glow" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="label">USDT Available Balance (Platform)</p>
-          <h2 className="title-xl" style={{ margin: '8px 0', fontFamily: 'monospace' }}>
-            {parseFloat(usdt.availableBalance).toFixed(4)} <span style={{ fontSize: 16, color: 'var(--accent)' }}>USDT</span>
-          </h2>
-          {+usdt.lockedBalance > 0 && <p className="body-sm">🔒 {(+usdt.lockedBalance).toFixed(4)} USDT locked in active escrows</p>}
-        </motion.div>
-      )}
 
       {/* Web3 Integration Card */}
       <div
@@ -111,12 +87,19 @@ export default function WalletPage() {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
-            <p className="label" style={{ color: 'var(--accent)', letterSpacing: 1, margin: 0 }}>INTERNAL WEB3 WALLET</p>
+            <p className="label" style={{ color: 'var(--accent)', letterSpacing: 1, margin: 0 }}>ON-CHAIN WALLET</p>
             <h3 style={{ margin: '8px 0 0', fontWeight: 600 }}>Sepolia Testnet</h3>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <p className="label" style={{ margin: 0 }}>ETH Balance</p>
-            <h2 className="title-lg" style={{ margin: 0, fontFamily: 'monospace' }}>{balanceEth}</h2>
+            <p className="label" style={{ margin: 0 }}>Native ETH</p>
+            <h2 className="title-lg" style={{ margin: 0, fontFamily: 'monospace' }}>
+              {(parseFloat(balanceEth || '0') || 0).toFixed(6)} ETH
+            </h2>
+            {symbol !== 'ETH' && (
+              <p className="body-sm" style={{ margin: '6px 0 0', color: 'rgba(255,255,255,0.5)' }}>
+                ≈ {formatEth(parseFloat(balanceEth || '0') || 0).formatted} <span style={{ fontSize: 10 }}>(display)</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -169,11 +152,10 @@ export default function WalletPage() {
             </button>
           </div>
         )}
+        <p className="body-sm" style={{ marginTop: 12, fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+          Completed trades release Sepolia ETH to this address (synced to your profile). This is not USDT on-chain — the currency toggle is for display only.
+        </p>
       </div>
-
-      {/* (Removed multiple wallets map, using only USDT above to match merchant interface) */}
-
-
 
       {/* Simulated deposit (MVP) */}
       {/* <div className="card" style={{ opacity: 0.6 }}>
@@ -195,7 +177,7 @@ export default function WalletPage() {
       <div>
         <p className="title-sm" style={{ marginBottom: 12 }}>Transaction History</p>
         {transactions.length === 0 ? (
-          <div className="empty-state"><div className="icon">📊</div><p>No transactions yet</p></div>
+          <div className="empty-state"><div className="icon">📊</div><p>No ledger entries</p><p className="body-sm" style={{ marginTop: 8 }}>Escrow sends native ETH on-chain — check your balance above after trades complete.</p></div>
         ) : (
           transactions.map((t, i) => (
             <motion.div key={t.id} className="list-row"
@@ -241,16 +223,33 @@ export default function WalletPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <label className="label" style={{ margin: 0 }}>
-                      Amount ({isUsdtMode ? 'USDT' : 'ETH'})
-                      {sendAmount && <span style={{ color: 'var(--accent)', marginLeft: 8, fontSize: 10 }}>≈ {isUsdtMode ? (parseFloat(sendAmount) / 3000).toFixed(4) + ' ETH' : (parseFloat(sendAmount) * 3000).toFixed(2) + ' USDT'}</span>}
+                      Amount ({isUsdcMode ? 'USDC' : 'ETH'})
+                      {sendAmount && <span style={{ color: 'var(--accent)', marginLeft: 8, fontSize: 10 }}>≈ {isUsdcMode ? (parseFloat(sendAmount) / 3000).toFixed(4) + ' ETH' : (parseFloat(sendAmount) * 3000).toFixed(2) + ' USDC'}</span>}
                     </label>
-                    <button type="button" onClick={() => setSendAmount(isUsdtMode ? (parseFloat(balanceEth) * 3000).toFixed(2) : balanceEth)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--accent)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>MAX</button>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                     <input type="number" className="input" placeholder="0.0" step="0.0001" value={sendAmount} onChange={e => setSendAmount(e.target.value)} required disabled={sendLoading} style={{ flex: 1 }} />
-                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => { setIsUsdtMode(!isUsdtMode); setSendAmount(''); }} title="Swap Currency">
-                      ⇌ {isUsdtMode ? 'USDT' : 'ETH'}
+                    <button type="button" className="btn" style={{ padding: '0 16px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => { setIsUsdcMode(!isUsdcMode); setSendAmount(''); }} title="Swap Currency">
+                      ⇌ {isUsdcMode ? 'USDC' : 'ETH'}
                     </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[0, 20, 30, 50, 100].map(pct => (
+                      <button
+                        key={pct} type="button"
+                        onClick={() => {
+                          const maxAmt = isUsdcMode ? parseFloat(balanceEth) * 3000 : parseFloat(balanceEth);
+                          setSendAmount((maxAmt * (pct / 100)).toFixed(isUsdcMode ? 2 : 4));
+                        }}
+                        style={{
+                          flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600,
+                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'var(--accent)', borderRadius: 4, cursor: 'pointer'
+                        }}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={sendLoading}>

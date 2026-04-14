@@ -43,6 +43,7 @@ export class AdminService {
     const volumeResult = await this.orderRepo
       .createQueryBuilder('o')
       .select('SUM(o.fiatAmount)', 'totalVolume')
+      .addSelect('SUM(o.cryptoAmount)', 'totalCrypto')
       .where('o.status = :status', { status: OrderStatus.COMPLETED })
       .getRawOne();
 
@@ -50,6 +51,7 @@ export class AdminService {
       totalUsers, totalMerchants, totalOrders,
       openDisputes, completedOrders,
       totalVolumeFiat: parseFloat(volumeResult?.totalVolume ?? '0'),
+      totalVolumeCrypto: parseFloat(volumeResult?.totalCrypto ?? '0'),
     };
   }
 

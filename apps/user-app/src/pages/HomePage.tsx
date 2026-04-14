@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuthStore }   from '../store/auth.store';
-import { useWalletStore } from '../store/wallet.store';
-import { useOrderStore }  from '../store/order.store';
+import { useAuthStore } from '../store/auth.store';
+import { useOrderStore } from '../store/order.store';
+import { useWeb3Store } from '../store/web3.store';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 const statusColor: Record<string, string> = {
   COMPLETED: 'badge-green',
@@ -16,15 +17,14 @@ const statusColor: Record<string, string> = {
 };
 
 export default function HomePage() {
-  const user    = useAuthStore((s) => s.user);
-  const wallets = useWalletStore((s) => s.wallets);
-  const orders  = useOrderStore((s) => s.orders);
-  const { fetchWallets } = useWalletStore();
-  const { fetchOrders }  = useOrderStore();
+  const user = useAuthStore((s) => s.user);
+  const orders = useOrderStore((s) => s.orders);
+  const { fetchOrders } = useOrderStore();
+  const { balanceEth } = useWeb3Store();
+  const { formatEth, symbol } = useFormatCurrency();
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchWallets();
     fetchOrders();
   }, []);
 
@@ -32,7 +32,8 @@ export default function HomePage() {
     !['COMPLETED', 'CANCELLED', 'REFUNDED'].includes(o.status),
   );
 
-  const totalUSDT = wallets.find((w) => w.crypto === 'USDT');
+  const ethNum = parseFloat(balanceEth || '0');
+  const displayBal = formatEth(Number.isFinite(ethNum) ? ethNum : 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -44,16 +45,18 @@ export default function HomePage() {
 
       {/* Balance card */}
       <motion.div className="card card-glow" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
-        <p className="label">USDT Balance</p>
+        <p className="label">On-chain wallet (Sepolia ETH)</p>
         <h2 className="title-xl" style={{ margin: '8px 0', fontFamily: "'SF Mono', monospace" }}>
-          {totalUSDT ? parseFloat('' + totalUSDT.availableBalance).toFixed(4) : '0.0000'}{' '}
-          <span style={{ fontSize: 16, color: 'var(--accent)' }}>USDT</span>
+          {(Number.isFinite(ethNum) ? ethNum : 0).toFixed(6)} ETH
         </h2>
-        {totalUSDT && +totalUSDT.lockedBalance > 0 && (
-          <p className="body-sm">
-            🔒 {parseFloat('' + totalUSDT.lockedBalance).toFixed(4)} USDT in escrow
+        {symbol !== 'ETH' && (
+          <p className="body-sm" style={{ marginTop: 6, color: 'rgba(255,255,255,0.5)' }}>
+            ≈ {displayBal.formatted} <span style={{ fontSize: 11 }}>(display only)</span>
           </p>
         )}
+        <p className="body-sm" style={{ marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+          When a trade completes, escrow sends native ETH to this app wallet address (synced to your profile).
+        </p>
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <button id="home-buy-btn" onClick={() => navigate('/buy')} className="btn btn-primary btn-sm" style={{ flex: 1 }}>
             Buy Crypto

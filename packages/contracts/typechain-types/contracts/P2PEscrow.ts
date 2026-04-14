@@ -33,7 +33,6 @@ export interface P2PEscrowInterface extends Interface {
       | "release"
       | "renounceOwnership"
       | "transferOwnership"
-      | "usdt"
   ): FunctionFragment;
 
   getEvent(
@@ -46,7 +45,7 @@ export interface P2PEscrowInterface extends Interface {
 
   encodeFunctionData(
     functionFragment: "deposit",
-    values: [BytesLike, BigNumberish, AddressLike]
+    values: [BytesLike, AddressLike]
   ): string;
   encodeFunctionData(functionFragment: "escrows", values: [BytesLike]): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
@@ -60,7 +59,6 @@ export interface P2PEscrowInterface extends Interface {
     functionFragment: "transferOwnership",
     values: [AddressLike]
   ): string;
-  encodeFunctionData(functionFragment: "usdt", values?: undefined): string;
 
   decodeFunctionResult(functionFragment: "deposit", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "escrows", data: BytesLike): Result;
@@ -75,7 +73,6 @@ export interface P2PEscrowInterface extends Interface {
     functionFragment: "transferOwnership",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "usdt", data: BytesLike): Result;
 }
 
 export namespace EscrowLockedEvent {
@@ -204,9 +201,9 @@ export interface P2PEscrow extends BaseContract {
   ): Promise<this>;
 
   deposit: TypedContractMethod<
-    [orderId: BytesLike, amount: BigNumberish, recipient: AddressLike],
+    [orderId: BytesLike, recipient: AddressLike],
     [void],
-    "nonpayable"
+    "payable"
   >;
 
   escrows: TypedContractMethod<
@@ -236,8 +233,6 @@ export interface P2PEscrow extends BaseContract {
     "nonpayable"
   >;
 
-  usdt: TypedContractMethod<[], [string], "view">;
-
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -245,9 +240,9 @@ export interface P2PEscrow extends BaseContract {
   getFunction(
     nameOrSignature: "deposit"
   ): TypedContractMethod<
-    [orderId: BytesLike, amount: BigNumberish, recipient: AddressLike],
+    [orderId: BytesLike, recipient: AddressLike],
     [void],
-    "nonpayable"
+    "payable"
   >;
   getFunction(
     nameOrSignature: "escrows"
@@ -278,9 +273,6 @@ export interface P2PEscrow extends BaseContract {
   getFunction(
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "usdt"
-  ): TypedContractMethod<[], [string], "view">;
 
   getEvent(
     key: "EscrowLocked"

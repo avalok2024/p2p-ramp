@@ -44,7 +44,7 @@ export class AuthService {
         displayName: dto.displayName,
         phone:       dto.phone,
         role,
-        merchantStatus: role === UserRole.MERCHANT ? 'PENDING' : null,
+        merchantStatus: role === UserRole.MERCHANT ? 'ACTIVE' : null,
         web3Address: dto.web3Address,
       }),
     );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../api/client';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 const sColor: Record<string, string> = {
   PAID_MARKED:'badge-warning', COMPLETED:'badge-green',
@@ -11,6 +12,7 @@ const sColor: Record<string, string> = {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const navigate = useNavigate();
+  const { formatEth, symbol } = useFormatCurrency();
 
   useEffect(() => {
     api.get('/orders').then((r) => {
@@ -35,7 +37,7 @@ export default function OrdersPage() {
               onClick={() => o.id && navigate(`/orders/${o.id}`)} whileTap={{ scale: 0.98 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <div>
-                  <p className="title-sm">{o.type} {o.cryptoAmount} {o.crypto}</p>
+                  <p className="title-sm">{o.type} {formatEth(parseFloat(o.cryptoAmount)).formatted}</p>
                   <p className="body-sm" style={{ fontFamily: 'monospace', fontSize: 10 }} title={o.id}>
                     ₹{parseFloat('' + o.uniqueFiatAmount).toFixed(2)} exact · {o.referenceCode} · ID {o.id?.slice(0, 8)}…
                   </p>
@@ -55,7 +57,7 @@ export default function OrdersPage() {
             onClick={() => o.id && navigate(`/orders/${o.id}`)} whileTap={{ scale: 0.98 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <div>
-                <p className="title-sm">{o.type} {o.cryptoAmount} {o.crypto}</p>
+                <p className="title-sm">{o.type} {formatEth(parseFloat(o.cryptoAmount)).formatted}</p>
                 <p className="body-sm" style={{ fontFamily: 'monospace', fontSize: 10 }} title={o.id}>
                   ₹{parseFloat('' + o.fiatAmount).toLocaleString()} · ID {o.id?.slice(0, 8)}…
                 </p>

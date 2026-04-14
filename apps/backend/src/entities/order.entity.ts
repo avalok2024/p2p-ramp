@@ -3,10 +3,10 @@ import {
   ManyToOne, JoinColumn, OneToOne, OneToMany, Generated,
 } from 'typeorm';
 import { OrderStatus, OrderType, CryptoAsset, PaymentMethod } from '../../../../packages/shared/src';
-import { User }       from './user.entity';
+import { User } from './user.entity';
 import { MerchantAd } from './merchant-ad.entity';
-import { Escrow }     from './escrow.entity';
-import { Dispute }    from './dispute.entity';
+import { Escrow } from './escrow.entity';
+import { Dispute } from './dispute.entity';
 
 @Entity('orders')
 export class Order {
@@ -56,6 +56,9 @@ export class Order {
 
   @Column({ nullable: true })
   paymentProofUrl: string;
+
+  @Column({ nullable: true })
+  userUpiId: string;
 
   @Column({ nullable: true })
   paymentDeadline: Date;

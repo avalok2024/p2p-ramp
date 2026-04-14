@@ -13,7 +13,7 @@ export class MerchantAd {
   @Column()
   merchantId: string;
 
-  @Column({ type: 'enum', enum: CryptoAsset, default: CryptoAsset.USDT })
+  @Column({ type: 'enum', enum: CryptoAsset, default: CryptoAsset.ETH })
   crypto: CryptoAsset;
 
   @Column({ type: 'decimal', precision: 18, scale: 2 })

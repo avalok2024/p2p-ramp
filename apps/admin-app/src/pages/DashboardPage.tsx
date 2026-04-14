@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../api/client';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const navigate = useNavigate();
+  const { formatEth } = useFormatCurrency();
 
   useEffect(() => { api.get('/admin/stats').then(r => setStats(r.data)); }, []);
 
@@ -17,7 +19,7 @@ export default function DashboardPage() {
     { label: 'Total Orders',    value: stats.totalOrders,    color: 'card', icon: '📋' },
     { label: 'Open Disputes',   value: stats.openDisputes,   color: stats.openDisputes > 0 ? 'card-danger' : 'card', icon: '⚖️' },
     { label: 'Completed',       value: stats.completedOrders,color: 'card-glow', icon: '✅' },
-    { label: 'Total Volume',    value: `₹${stats.totalVolumeFiat?.toLocaleString()}`, color: 'card-glow', icon: '📈' },
+    { label: 'Total Volume',    value: formatEth(stats.totalVolumeCrypto || 0).formatted, color: 'card-glow', icon: '📈' },
   ];
 
   return (

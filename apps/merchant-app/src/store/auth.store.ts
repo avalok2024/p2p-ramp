@@ -32,7 +32,12 @@ export const useAuthStore = create<MerchantAuthState>()(
           set({ token: r.data.accessToken, user: r.data.user });
         } finally { set({ isLoading: false }); }
       },
-      logout: () => { localStorage.removeItem('rampx_merchant_token'); set({ user: null, token: null }); },
+      logout: () => { 
+        localStorage.removeItem('rampx_merchant_token'); 
+        localStorage.removeItem('embedded_wallet_key');
+        useWeb3Store.getState().generateNewWallet();
+        set({ user: null, token: null }); 
+      },
     }),
     { name: 'rampx_merchant', partialize: (s) => ({ user: s.user, token: s.token }) }
   )

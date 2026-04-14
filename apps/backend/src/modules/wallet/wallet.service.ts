@@ -2,7 +2,7 @@ import {
   Injectable, BadRequestException, NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Wallet }            from '../../entities/wallet.entity';
 import { WalletTransaction } from '../../entities/wallet-transaction.entity';
 import { CryptoAsset, WalletTransactionType } from '../../../../../packages/shared/src';
@@ -98,8 +98,11 @@ export class WalletService {
   }
 
   /**
-   * Release escrow: deduct from holder's locked → credit to recipient's available.
-   * Used on successful trade completion.
+   * Release escrow: credit recipient's available balance (trade settlement ledger).
+   *
+   * On-chain trades lock ETH in the contract only — we never call lockForEscrow(), so the
+   * seller's in-app lockedBalance is usually zero. We only deduct locked when it was
+   * actually funded in-app; we always credit the recipient so platform wallets reflect the trade.
    */
   async releaseEscrow(
     holderId:    string,
@@ -108,43 +111,60 @@ export class WalletService {
     amount:      number,
     orderId:     string,
   ): Promise<void> {
+    const amt = Number(amount);
     await this.dataSource.transaction(async (em) => {
-      // 1. Deduct from holder's locked balance
-      const holderWallet = await em.findOne(Wallet, {
-        where: { userId: holderId, crypto },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!holderWallet) throw new NotFoundException('Holder wallet not found');
-      holderWallet.lockedBalance = parseFloat((+holderWallet.lockedBalance - amount).toFixed(8)) as any;
-      await em.save(holderWallet);
+      const holderWallet = await this.ensureWalletRow(em, holderId, crypto);
+      const locked = +holderWallet.lockedBalance;
+      if (locked + 1e-9 >= amt) {
+        holderWallet.lockedBalance = parseFloat((locked - amt).toFixed(8)) as any;
+        await em.save(holderWallet);
 
-      await em.save(em.create(WalletTransaction, {
-        userId: holderId, crypto,
-        type:   WalletTransactionType.ESCROW_RELEASE,
-        amount: -amount,
-        balanceAfter: +holderWallet.availableBalance,
-        relatedOrderId: orderId,
-        note:   `Escrow released for order ${orderId}`,
-      }));
+        await em.save(em.create(WalletTransaction, {
+          userId: holderId, crypto,
+          type:   WalletTransactionType.ESCROW_RELEASE,
+          amount: -amt,
+          balanceAfter: +holderWallet.availableBalance,
+          relatedOrderId: orderId,
+          note:   `Escrow released for order ${orderId}`,
+        }));
+      }
 
-      // 2. Credit recipient's available balance
-      const recipientWallet = await em.findOne(Wallet, {
-        where: { userId: recipientId, crypto },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!recipientWallet) throw new NotFoundException('Recipient wallet not found');
-      recipientWallet.availableBalance = parseFloat((+recipientWallet.availableBalance + amount).toFixed(8)) as any;
+      const recipientWallet = await this.ensureWalletRow(em, recipientId, crypto);
+      recipientWallet.availableBalance = parseFloat(
+        (+recipientWallet.availableBalance + amt).toFixed(8),
+      ) as any;
       await em.save(recipientWallet);
 
       await em.save(em.create(WalletTransaction, {
         userId: recipientId, crypto,
         type:   WalletTransactionType.TRADE_CREDIT,
-        amount: +amount,
+        amount: amt,
         balanceAfter: +recipientWallet.availableBalance,
         relatedOrderId: orderId,
         note:   `Trade credit from order ${orderId}`,
       }));
     });
+  }
+
+  private async ensureWalletRow(
+    em: EntityManager,
+    userId: string,
+    crypto: CryptoAsset,
+  ): Promise<Wallet> {
+    let w = await em.findOne(Wallet, {
+      where: { userId, crypto },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!w) {
+      w = em.create(Wallet, {
+        userId,
+        crypto,
+        availableBalance: 0 as any,
+        lockedBalance: 0 as any,
+      });
+      await em.save(w);
+    }
+    return w;
   }
 
   /**

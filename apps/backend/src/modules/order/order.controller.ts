@@ -38,6 +38,12 @@ export class OrderController {
     return this.orderService.getOrder(id, user);
   }
 
+  @Post(':id/verify-lock')
+  @ApiOperation({ summary: 'Merchant verified Web3 lock on smart contract' })
+  verifyLock(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.orderService.verifyLock(id, user);
+  }
+
   @Post(':id/pay')
   @ApiOperation({ summary: 'User marks "I Paid"' })
   markPaid(

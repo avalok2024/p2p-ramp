@@ -50,9 +50,8 @@ export class MerchantService {
   async getActiveAds(crypto?: CryptoAsset) {
     const query = this.adRepo.createQueryBuilder('ad')
       .leftJoinAndSelect('ad.merchant', 'merchant')
-      .where('ad.isActive = true')
-      // Only show ads from fully-approved merchants
-      .andWhere('merchant.merchantStatus = :ms', { ms: 'ACTIVE' });
+      .where('ad.isActive = true');
+      // .andWhere('merchant.merchantStatus = :ms', { ms: 'ACTIVE' });
     if (crypto) query.andWhere('ad.crypto = :crypto', { crypto });
     query.orderBy('ad.pricePerUnit', 'ASC');
     return query.getMany();

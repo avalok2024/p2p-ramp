@@ -9,23 +9,25 @@ import api from '../api/client';
 const PERIOD_LABELS: Record<string, string> = {
   week: 'This Week', month: 'This Month', all: 'All Time',
 };
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{
-      background: '#16162a', border: '1px solid rgba(255,255,255,.08)',
-      borderRadius: 10, padding: '10px 14px', fontSize: 13,
-    }}>
-      <p style={{ color: 'var(--text-muted)', marginBottom: 4 }}>{label}</p>
-      <p style={{ color: 'var(--accent)', fontWeight: 700 }}>
-        ₹{Number(payload[0]?.value ?? 0).toLocaleString()}
-      </p>
-    </div>
-  );
-};
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 export default function EarningsPage() {
+  const { formatEth, symbol } = useFormatCurrency();
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div style={{
+        background: '#16162a', border: '1px solid rgba(255,255,255,.08)',
+        borderRadius: 10, padding: '10px 14px', fontSize: 13,
+      }}>
+        <p style={{ color: 'var(--text-muted)', marginBottom: 4 }}>{label}</p>
+        <p style={{ color: 'var(--accent)', fontWeight: 700 }}>
+          {formatEth(Number(payload[0]?.value ?? 0)).formatted}
+        </p>
+      </div>
+    );
+  };
   const [orders, setOrders]   = useState<any[]>([]);
   const [period, setPeriod]   = useState<'week' | 'month' | 'all'>('week');
 
@@ -42,7 +44,7 @@ export default function EarningsPage() {
     ? completed
     : completed.filter(o => now - new Date(o.createdAt).getTime() < ms[period]);
 
-  const totalVolume  = filtered.reduce((s, o) => s + +o.fiatAmount, 0);
+  const totalVolume  = filtered.reduce((s, o) => s + +o.cryptoAmount, 0);
   const totalTrades  = filtered.length;
   const avgOrder     = totalTrades ? totalVolume / totalTrades : 0;
 
@@ -50,16 +52,16 @@ export default function EarningsPage() {
   const buckets: Record<string, number> = {};
   filtered.forEach(o => {
     const d = new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-    buckets[d] = (buckets[d] || 0) + +o.fiatAmount;
+    buckets[d] = (buckets[d] || 0) + +o.cryptoAmount;
   });
   const chartData = Object.entries(buckets)
     .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
     .map(([date, volume]) => ({ date, volume }));
 
   const stats = [
-    { label: 'Total Volume',  value: `₹${totalVolume.toLocaleString()}`, cls: 'card-glow' },
+    { label: 'Total Volume',  value: formatEth(totalVolume).formatted, cls: 'card-glow' },
     { label: 'Trades',        value: totalTrades,                         cls: '' },
-    { label: 'Avg Order',     value: `₹${avgOrder.toFixed(0)}`,          cls: '' },
+    { label: 'Avg Trade Size',value: formatEth(avgOrder).formatted, cls: '' },
   ];
 
   return (
@@ -108,7 +110,7 @@ export default function EarningsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" />
               <XAxis dataKey="date" tick={{ fill: '#555577', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#555577', fontSize: 11 }} axisLine={false} tickLine={false}
-                tickFormatter={v => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
+                tickFormatter={v => formatEth(v).formatted} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,.04)' }} />
               <Bar dataKey="volume" fill="var(--accent)" radius={[4, 4, 0, 0]} maxBarSize={40} />
             </BarChart>
@@ -131,9 +133,9 @@ export default function EarningsPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <p className="title-sm" style={{ color: 'var(--accent)' }}>
-                  +₹{Number(o.fiatAmount).toLocaleString()}
+                  +{formatEth(parseFloat(o.cryptoAmount)).formatted}
                 </p>
-                <p className="body-sm">{o.cryptoAmount} {o.crypto}</p>
+                <p className="body-sm">₹{Number(o.fiatAmount).toLocaleString()}</p>
               </div>
             </motion.div>
           ))

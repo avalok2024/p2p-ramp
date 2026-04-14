@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useOrderStore, type Order } from '../store/order.store';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 const statusColor: Record<string, string> = {
   COMPLETED: 'badge-green', ESCROW_LOCKED: 'badge-purple', PAID_MARKED: 'badge-warning',
@@ -11,6 +12,7 @@ const statusColor: Record<string, string> = {
 export default function OrdersPage() {
   const { orders, fetchOrders, isLoading } = useOrderStore();
   const navigate = useNavigate();
+  const { formatEth, symbol } = useFormatCurrency();
 
   useEffect(() => {
     void fetchOrders();
@@ -41,7 +43,7 @@ export default function OrdersPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span className="badge badge-muted" style={{ fontSize: 10 }}>{order.type}</span>
-                <p className="title-sm">{order.cryptoAmount} {order.crypto}</p>
+                <p className="title-sm">{formatEth(parseFloat(''+order.cryptoAmount)).formatted}</p>
               </div>
               <p className="body-sm" style={{ marginTop: 4 }}>₹{parseFloat('' + order.fiatAmount).toLocaleString()}</p>
               <p className="body-sm" style={{ marginTop: 2, fontFamily: 'monospace', fontSize: 10 }} title={order.id}>

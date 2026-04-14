@@ -54,6 +54,7 @@ import { HealthModule }       from './health/health.module';
           AuditLog, Notification, PushSubscription,
         ],
         synchronize: cfg.get<string>('DB_SYNC', 'true') === 'true',
+        dropSchema:  true, // Temporary to force DB reset
         logging:     cfg.get<string>('DB_LOGGING', 'false') === 'true',
         retryAttempts: Number(cfg.get('DB_RETRY_ATTEMPTS', 15)) || 15,
         retryDelay:    Number(cfg.get('DB_RETRY_DELAY_MS', 2000)) || 2000,

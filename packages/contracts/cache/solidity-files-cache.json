@@ -1,45 +1,6 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "D:\\Work\\DEV TESTS\\TESTS - 38\\p2p-ramp\\packages\\contracts\\contracts\\MockUSDT.sol": {
-      "lastModificationDate": 1775933913915,
-      "contentHash": "9f0fad580a6cede22486a3326caedde3",
-      "sourceName": "contracts/MockUSDT.sol",
-      "solcConfig": {
-        "version": "0.8.20",
-        "settings": {
-          "evmVersion": "paris",
-          "optimizer": {
-            "enabled": false,
-            "runs": 200
-          },
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "@openzeppelin/contracts/token/ERC20/ERC20.sol",
-        "@openzeppelin/contracts/access/Ownable.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "MockUSDT"
-      ]
-    },
     "D:\\Work\\DEV TESTS\\TESTS - 38\\p2p-ramp\\packages\\contracts\\node_modules\\@openzeppelin\\contracts\\access\\Ownable.sol": {
       "lastModificationDate": 1775933888190,
       "contentHash": "d3c790edc9ccf808a17c5a6cd13614fd",
@@ -268,8 +229,8 @@
       ]
     },
     "D:\\Work\\DEV TESTS\\TESTS - 38\\p2p-ramp\\packages\\contracts\\contracts\\P2PEscrow.sol": {
-      "lastModificationDate": 1775933915934,
-      "contentHash": "126f01ac3053a34237ec828389faa554",
+      "lastModificationDate": 1775983965630,
+      "contentHash": "bc1e7e20a6367cc7d9322f588855e54c",
       "sourceName": "contracts/P2PEscrow.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -296,7 +257,6 @@
         }
       },
       "imports": [
-        "@openzeppelin/contracts/token/ERC20/IERC20.sol",
         "@openzeppelin/contracts/access/Ownable.sol"
       ],
       "versionPragmas": [

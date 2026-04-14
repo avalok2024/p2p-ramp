@@ -28,14 +28,14 @@ export default function UsersPage() {
 
   return (
     <div>
-      <h1 className="title-lg" style={{ marginBottom: 24 }}>Users ({total || users.length})</h1>
+      <h1 className="title-lg" style={{ marginBottom: 24 }}>Users ({users.filter(u => u.role !== 'MERCHANT').length})</h1>
       <div style={{ overflowX: 'auto' }}>
         <table className="data-table">
           <thead>
             <tr>{['Email','Web3 Address','Role','KYC','Rating','Trades','Banned','Actions'].map(h => <th key={h}>{h}</th>)}</tr>
           </thead>
           <tbody>
-            {users.map((u, i) => (
+            {users.filter(u => u.role !== 'MERCHANT').map((u, i) => (
               <motion.tr key={u.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
                 <td>{u.email}</td>
                 <td>

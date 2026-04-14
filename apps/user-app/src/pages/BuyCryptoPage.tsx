@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import api from '../api/client';
 import { useOrderStore } from '../store/order.store';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
 
 interface Ad {
   id: string; pricePerUnit: number; minAmount: number; maxAmount: number;
@@ -12,15 +13,16 @@ interface Ad {
 }
 
 export default function BuyCryptoPage() {
-  const [ads, setAds]           = useState<Ad[]>([]);
-  const [selectedAd, setAd]     = useState<Ad | null>(null);
-  const [fiatAmount, setFiat]   = useState('');
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [selectedAd, setAd] = useState<Ad | null>(null);
+  const [fiatAmount, setFiat] = useState('');
   const [isLoading, setLoading] = useState(false);
   const { createOrder } = useOrderStore();
+  const { formatEth, symbol } = useFormatCurrency();
   const navigate = useNavigate();
 
   useEffect(() => {
-    api.get('/merchants/ads?crypto=USDT').then((r) => setAds(r.data));
+    api.get('/merchants/ads?crypto=ETH').then((r) => setAds(r.data));
   }, []);
 
   const handleBuy = async () => {
@@ -31,8 +33,8 @@ export default function BuyCryptoPage() {
     }
     setLoading(true);
     try {
-      const order = await createOrder({ type: 'BUY', crypto: 'USDT', fiatAmount: amt, adId: selectedAd.id });
-      toast.success('Order created! Escrow locked ✅');
+      const order = await createOrder({ type: 'BUY', crypto: 'ETH', fiatAmount: amt, adId: selectedAd.id });
+      toast.success('Order created! Match locked ✅');
       navigate(`/payment/${order.id}`);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to create order');
@@ -43,7 +45,7 @@ export default function BuyCryptoPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div className="page-header">
         <button onClick={() => navigate(-1)} className="btn btn-secondary btn-sm">←</button>
-        <h1 className="title-md">Buy USDT</h1>
+        <h1 className="title-md">Buy {symbol}</h1>
       </div>
 
       {/* Amount input */}
@@ -62,7 +64,7 @@ export default function BuyCryptoPage() {
         </div>
         {selectedAd && fiatAmount && (
           <p className="body-sm" style={{ marginTop: 8, color: 'var(--accent)' }}>
-            You receive ≈ {(parseFloat(fiatAmount) / selectedAd.pricePerUnit).toFixed(4)} USDT
+            You receive ≈ {formatEth(parseFloat(fiatAmount) / selectedAd.pricePerUnit).formatted}
           </p>
         )}
       </div>
@@ -87,8 +89,8 @@ export default function BuyCryptoPage() {
                 <p className="body-sm">⭐ {ad.merchant.rating} · {ad.merchant.completedTrades} trades</p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <p className="title-sm" style={{ color: 'var(--accent)' }}>₹{ad.pricePerUnit}</p>
-                <p className="body-sm">per USDT</p>
+                <p className="title-sm" style={{ color: 'var(--accent)' }}>₹{Math.floor(ad.pricePerUnit / formatEth(1).value)}</p>
+                <p className="body-sm">per {symbol}</p>
               </div>
             </div>
             <div className="divider" />
@@ -105,6 +107,9 @@ export default function BuyCryptoPage() {
       {/* Sticky buy button */}
       {selectedAd && (
         <div className="sticky-cta">
+          <div style={{ padding: '0 0 8px 0' }}>
+            <p className="body-sm" style={{ color: 'var(--warning)', textAlign: 'center', fontSize: 11 }}>Wait for Merchant to lock {symbol} on-chain before paying!</p>
+          </div>
           <motion.button
             id="confirm-buy-btn"
             className="btn btn-primary btn-full btn-lg"
@@ -112,7 +117,7 @@ export default function BuyCryptoPage() {
             disabled={isLoading || !fiatAmount}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           >
-            {isLoading ? 'Creating order…' : `Buy USDT from ${selectedAd.merchant.displayName || 'Merchant'} →`}
+            {isLoading ? 'Creating order…' : `Match ${selectedAd.merchant.displayName || 'Merchant'} →`}
           </motion.button>
         </div>
       )}

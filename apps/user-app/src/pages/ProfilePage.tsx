@@ -2,6 +2,7 @@ import { useAuthStore } from '../store/auth.store';
 import { useNavigate }  from 'react-router-dom';
 import { motion }       from 'framer-motion';
 import toast            from 'react-hot-toast';
+import { CurrencyToggle } from '../components/CurrencyToggle';
 
 const KYC_COLOR: Record<string, string> = { VERIFIED: 'badge-green', PENDING: 'badge-warning', REJECTED: 'badge-danger' };
 
@@ -75,6 +76,16 @@ export default function ProfilePage() {
         <button id="push-subscribe-btn" className="btn btn-secondary btn-full" onClick={subscribeToPush}>
           🔔 Enable Push Notifications
         </button>
+      </motion.div>
+
+      {/* Preferences */}
+      <motion.div className="card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+        <p className="label" style={{ marginBottom: 12 }}>App Preferences</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="body-sm">Display Currency</span>
+          <CurrencyToggle />
+        </div>
+        <p className="body-sm" style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>Note: Core transactions always settle in ETH.</p>
       </motion.div>
 
       {/* Logout */}

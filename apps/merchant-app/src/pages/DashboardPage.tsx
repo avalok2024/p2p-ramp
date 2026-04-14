@@ -3,24 +3,30 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../api/client';
 import { useAuthStore } from '../store/auth.store';
+import { useWeb3Store } from '../store/web3.store';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
+import { CurrencyToggle } from '../components/CurrencyToggle';
 
 export default function DashboardPage() {
   const user = useAuthStore(s => s.user);
   const [orders, setOrders]   = useState<any[]>([]);
-  const [wallet, setWallet]   = useState<any>(null);
   const navigate = useNavigate();
-
+  const { balanceEth } = useWeb3Store();
+  const { formatEth, symbol } = useFormatCurrency();
   useEffect(() => {
     api.get('/orders').then(r => setOrders(r.data));
-    api.get('/wallet').then(r => setWallet(r.data.find((w: any) => w.crypto === 'USDT')));
   }, []);
 
   const pending = orders.filter(o => o.status === 'PAID_MARKED').length;
   const completed = orders.filter(o => o.status === 'COMPLETED').length;
-  const volume = orders.filter(o => o.status === 'COMPLETED').reduce((s, o) => s + +o.fiatAmount, 0);
+  const volumeEth = orders.filter(o => o.status === 'COMPLETED').reduce((s, o) => s + +o.cryptoAmount, 0);
+
+  const ethOnChain = parseFloat(balanceEth || '0') || 0;
+  const displayBal = formatEth(ethOnChain);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
         <p className="body-sm">Welcome back 👋</p>
         <h1 className="title-lg">{user?.displayName || 'Merchant'}</h1>
@@ -29,8 +35,8 @@ export default function DashboardPage() {
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {[
-          { label: 'USDT Balance', value: wallet ? (+wallet.availableBalance).toFixed(2) : '—', unit: 'USDT', cls: 'card-glow' },
-          { label: 'Locked',       value: wallet ? (+wallet.lockedBalance).toFixed(2) : '—',    unit: 'USDT', cls: '' },
+          { label: 'On-chain ETH', value: ethOnChain.toFixed(6), unit: 'native Sepolia', cls: 'card-glow' },
+          { label: 'Approx. value', value: symbol === 'ETH' ? '—' : displayBal.formatted, unit: symbol === 'ETH' ? '' : 'display', cls: '' },
           { label: 'Pending',      value: pending,    unit: 'orders', cls: pending > 0 ? 'card-warning' : '' },
           { label: 'Completed',    value: completed,  unit: 'orders', cls: 'card-glow' },
         ].map((s, i) => (
@@ -46,7 +52,7 @@ export default function DashboardPage() {
       {/* Volume */}
       <div className="card card-purple">
         <p className="label">Total Volume</p>
-        <p className="title-xl gradient-text">₹{volume.toLocaleString()}</p>
+        <p className="title-xl gradient-text">{formatEth(volumeEth).formatted}</p>
         <p className="body-sm">from {completed} completed trades</p>
       </div>
 
@@ -67,6 +73,16 @@ export default function DashboardPage() {
         <button id="dash-view-orders" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => navigate('/orders')}>
           View Orders
         </button>
+      </div>
+
+      {/* Preferences */}
+      <div className="card">
+        <p className="label" style={{ marginBottom: 12 }}>App Preferences</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span className="body-sm">Display Currency</span>
+          <CurrencyToggle />
+        </div>
+        <p className="body-sm" style={{ marginTop: 8, fontSize: 11, color: 'var(--text-muted)' }}>Note: Core transactions always settle in ETH.</p>
       </div>
     </div>
   );

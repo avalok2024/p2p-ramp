@@ -5,9 +5,12 @@ import { useWeb3Store } from '../store/web3.store';
 import { ethers } from 'ethers';
 import { QRCodeCanvas } from 'qrcode.react';
 import api from '../api/client';
+import { useFormatCurrency } from '../hooks/useFormatCurrency';
+import { CurrencyToggle } from '../components/CurrencyToggle';
 
 export default function WalletPage() {
   const { wallet, address, balanceEth, isUnlocked, hasStoredWallet, generateNewWallet, unlockWallet, lockWallet, initWallet, fetchBalance } = useWeb3Store();
+  const { formatEth } = useFormatCurrency();
   
   const [password, setPassword] = useState('');
   const [isGenerating, setIsGenerating] = useState(!hasStoredWallet());
@@ -187,18 +190,17 @@ export default function WalletPage() {
               </div>
 
               {/* Right Balances */}
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                <p className="label" style={{ color: 'var(--accent)', margin: '0 0 12px 0', fontSize: 11 }}>💰 BALANCES</p>
-                <div>
-                  <p className="label" style={{ margin: 0, fontSize: 10 }}>ETH Balance:</p>
-                  <h3 className="title-md" style={{ margin: '4px 0 0 0', fontFamily: 'monospace' }}>{balanceEth} ETH</h3>
-                  <p className="body-sm" style={{ margin: '2px 0 12px 0', color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Available for gas fees</p>
-                  
-                  <p className="label" style={{ margin: 0, fontSize: 10 }}>MockUSDT Balance (Platform):</p>
-                  <h3 className="title-md" style={{ margin: '4px 0 0 0', fontFamily: 'monospace' }}>
-                    {parseFloat(dbWallets.find(w => w.crypto === 'USDT')?.availableBalance || '0').toFixed(4)} USDT
-                  </h3>
-                  <p className="body-sm" style={{ margin: '2px 0 0 0', color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Available for testing transactions</p>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                  <p className="label" style={{ color: 'var(--accent)', margin: 0, fontSize: 11, whiteSpace: 'nowrap' }}>💰 BALANCES</p>
+                  <div style={{ transform: 'scale(0.95)', transformOrigin: 'top left', alignSelf: 'flex-start' }}>
+                    <CurrencyToggle />
+                  </div>
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <p className="label" style={{ margin: 0, fontSize: 10, opacity: 0.8, textTransform: 'uppercase' }}>Primary Balance:</p>
+                  <h2 className="title-xl" style={{ margin: '4px 0 0 0', fontFamily: 'monospace', fontSize: 36 }}>{formatEth(parseFloat(balanceEth || '0')).formatted}</h2>
+                  <p className="body-sm" style={{ margin: '4px 0 0 0', color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>Available for gas fees</p>
                 </div>
               </div>
             </div>
@@ -219,24 +221,6 @@ export default function WalletPage() {
                <p className="body-sm" style={{ margin: '0 0 16px 0', color: 'rgba(255,255,255,0.6)' }}>Administrative tools for testing and emergency control of the system.</p>
                
                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
-                   <div style={{ flex: 1 }}>
-                     <p style={{ margin: '0 0 4px 0', fontSize: 13, fontWeight: 600 }}>💧 Mint MockUSDT</p>
-                     <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Generate test USDT tokens directly into the admin wallet for simulation and testing purposes.</p>
-                   </div>
-                   <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={async () => {
-                     try {
-                       await api.post('/wallet/deposit', { crypto: 'USDT', amount: 1000 });
-                       toast.success('Generated 1,000 MockUSDT in Admin Wallet!');
-                       if (fetchBalance) fetchBalance();
-                       fetchDbWallets();
-                     } catch(e:any) {
-                       toast.error('Failed to mint MockUSDT');
-                     }
-                   }}>Mint Tokens</button>
-                 </div>
-
-                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }} />
 
                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20 }}>
                    <div style={{ flex: 1 }}>
