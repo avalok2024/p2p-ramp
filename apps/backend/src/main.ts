@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -66,28 +65,6 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
-
-
-  // ── Startup DB migration: convert old PostgreSQL enum columns → varchar ────
-  // TypeORM `synchronize` won't change existing column types in place,
-  // so we patch manually before the app starts serving traffic.
-  try {
-    const ds = app.get(DataSource);
-    const columnConversions = [
-      `ALTER TABLE orders ALTER COLUMN type TYPE varchar USING type::text`,
-      `ALTER TABLE orders ALTER COLUMN status TYPE varchar USING status::text`,
-      `ALTER TABLE orders ALTER COLUMN crypto TYPE varchar USING crypto::text`,
-      `ALTER TABLE orders ALTER COLUMN "paymentMethod" TYPE varchar USING "paymentMethod"::text`,
-      `ALTER TABLE notifications ALTER COLUMN type TYPE varchar USING type::text`,
-    ];
-    for (const sql of columnConversions) {
-      await ds.query(sql).catch(() => {/* already varchar — skip */});
-    }
-    console.log('✅ DB enum→varchar migration complete');
-  } catch (e) {
-    console.warn('⚠️  DB migration skipped:', e.message);
-  }
-
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
   console.log(`\n🚀 RampX API running at http://localhost:${port}/api`);
