@@ -12,7 +12,7 @@ export class Notification {
   @Column()
   userId: string;
 
-  @Column({ type: 'enum', enum: NotificationType })
+  @Column({ type: 'varchar' })
   type: NotificationType;
 
   @Column()

@@ -27,13 +27,13 @@ export class Order {
   @Column()
   adId: string;
 
-  @Column({ type: 'enum', enum: OrderType })
+  @Column({ type: 'varchar', default: OrderType.BUY })
   type: OrderType;
 
-  @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.CREATED })
+  @Column({ type: 'varchar', default: OrderStatus.CREATED })
   status: OrderStatus;
 
-  @Column({ type: 'enum', enum: CryptoAsset })
+  @Column({ type: 'varchar', default: CryptoAsset.ETH })
   crypto: CryptoAsset;
 
   @Column({ type: 'decimal', precision: 18, scale: 8 })
@@ -48,7 +48,7 @@ export class Order {
   @Column({ type: 'decimal', precision: 18, scale: 2 })
   pricePerUnit: number;
 
-  @Column({ type: 'enum', enum: PaymentMethod })
+  @Column({ type: 'varchar', nullable: true })
   paymentMethod: PaymentMethod;
 
   @Column({ unique: true })
