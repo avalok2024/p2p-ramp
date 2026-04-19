@@ -60,6 +60,18 @@ export class Order {
   @Column({ nullable: true })
   userUpiId: string;
 
+  /** Scan & Pay: the shop/vendor UPI ID decoded from the QR code */
+  @Column({ nullable: true })
+  receiverUpiId: string;
+
+  /** Scan & Pay: display name of the fiat receiver (shop/vendor) */
+  @Column({ nullable: true })
+  receiverName: string;
+
+  /** Scan & Pay: merchant's proof of paying the UPI receiver */
+  @Column({ nullable: true })
+  merchantPaymentProofUrl: string;
+
   @Column({ nullable: true })
   paymentDeadline: Date;
 

@@ -65,4 +65,38 @@ export class MatchingService {
 
     throw new BadRequestException('Matching merchant found but has insufficient balance. Please try later.');
   }
+
+  async findBestScanPayMerchant(
+    crypto: CryptoAsset,
+    fiatAmount: number,
+  ): Promise<MatchResult> {
+    // Get all active ads matching the crypto (merchant must have BUY ad active = accepting crypto)
+    const ads = await this.adRepo
+      .createQueryBuilder('ad')
+      .leftJoinAndSelect('ad.merchant', 'merchant')
+      .where('ad.isActive = true')
+      .andWhere('merchant.merchantStatus = :ms', { ms: 'ACTIVE' })
+      .andWhere('ad.crypto = :crypto', { crypto })
+      .andWhere('ad.minAmount <= :fiatAmount', { fiatAmount })
+      .andWhere('ad.maxAmount >= :fiatAmount', { fiatAmount })
+      .orderBy('ad.pricePerUnit', 'DESC') // Best rate for user (highest INR per crypto)
+      .getMany();
+
+    if (!ads.length) {
+      throw new BadRequestException('No merchant available for this amount. Try a different amount or later.');
+    }
+
+    // In Scan & Pay (Trust-based), the USER sends crypto to the MERCHANT.
+    // The merchant does NOT need crypto balance, they just need to be active
+    // properly verified to fulfill the fiat payment.
+    const bestAd = ads[0];
+    const cryptoAmount = fiatAmount / +bestAd.pricePerUnit;
+
+    return {
+      ad: bestAd,
+      merchantId: bestAd.merchantId,
+      cryptoAmount: parseFloat(cryptoAmount.toFixed(8)),
+      pricePerUnit: +bestAd.pricePerUnit,
+    };
+  }
 }

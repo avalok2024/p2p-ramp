@@ -11,6 +11,7 @@ import { MatchingService } from '../matching/matching.service';
 import { PaymentService } from '../payment/payment.service';
 import { NotificationService } from '../notification/notification.service';
 import { EscrowService } from '../escrow/escrow.service';
+import { WalletService } from '../wallet/wallet.service';
 import {
   OrderStatus, OrderType, EscrowStatus, CryptoAsset,
   NotificationType, UserRole,
@@ -26,6 +27,17 @@ export class CreateOrderDto {
   @IsOptional() @IsString() userUpiId?: string;
 }
 
+export class CreateScanPayOrderDto {
+  @IsEnum(CryptoAsset) crypto: CryptoAsset;
+  @IsNumber() @Min(1) fiatAmount: number;
+  // No receiver UPI at creation — user submits it after merchant accepts
+}
+
+export class SubmitReceiverDto {
+  @IsString() receiverUpiId: string;
+  @IsOptional() @IsString() receiverName?: string;
+}
+
 @Injectable()
 export class OrderService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OrderService.name);
@@ -39,6 +51,7 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
     private paymentService: PaymentService,
     private notifService: NotificationService,
     private escrowOnChain: EscrowService,
+    private walletService: WalletService,
     private dataSource: DataSource,
   ) { }
 
@@ -46,7 +59,7 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
     this.cancelInterval = setInterval(async () => {
       const expiredOrders = await this.orderRepo.find({
         where: {
-          status: In([OrderStatus.CREATED, OrderStatus.MATCHED, OrderStatus.ESCROW_LOCKED]),
+          status: In([OrderStatus.CREATED, OrderStatus.MATCHED, OrderStatus.ESCROW_LOCKED, OrderStatus.MERCHANT_ACCEPTED]),
           paymentDeadline: LessThan(new Date()),
         },
       });
@@ -58,7 +71,7 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
           this.logger.error(`Failed to auto-cancel ${order.id}: ${e.message}`);
         }
       }
-    }, 60000);
+    }, 15000); // Check every 15 seconds for snappy cleanup
   }
 
   onModuleDestroy() {
@@ -217,7 +230,8 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
   /** Cancel an order (only if ESCROW_LOCKED and before "I Paid") */
   async cancelOrder(orderId: string, user: User) {
     const order = await this.findOrderOrFail(orderId);
-    if (![OrderStatus.CREATED, OrderStatus.MATCHED, OrderStatus.ESCROW_LOCKED].includes(order.status))
+    const validStatuses = [OrderStatus.CREATED, OrderStatus.MATCHED, OrderStatus.ESCROW_LOCKED, OrderStatus.MERCHANT_ACCEPTED];
+    if (!validStatuses.includes(order.status))
       throw new BadRequestException('Cannot cancel order at this stage');
 
     const isParty = order.userId === user.id || order.merchantId === user.id;
@@ -234,6 +248,147 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
     order.status = OrderStatus.CANCELLED;
     await this.orderRepo.save(order);
     return order;
+  }
+
+  // ── Scan & Pay ───────────────────────────────────────────────────────────────
+
+  /**
+   * Step 1: User dials amount → backend auto-matches a merchant → order CREATED.
+   * No receiver UPI yet — collected after merchant accepts.
+   */
+  async createScanPayOrder(user: User, dto: CreateScanPayOrderDto) {
+    const { crypto, fiatAmount } = dto;
+
+    const match = await this.matchingService.findBestScanPayMerchant(crypto as any, fiatAmount);
+
+    const cryptoAmount = fiatAmount / match.pricePerUnit;
+    const referenceCode = this.paymentService.generateReferenceCode();
+    const deadline = new Date(Date.now() + 60 * 1000); // 60-seconds strict window BEFORE scanning QR
+
+    const order = this.orderRepo.create({
+      userId:          user.id,
+      merchantId:      match.merchantId,
+      adId:            match.ad.id,
+      type:            OrderType.SCAN_PAY,
+      crypto,
+      fiatAmount,
+      cryptoAmount:    parseFloat(cryptoAmount.toFixed(8)),
+      pricePerUnit:    match.pricePerUnit,
+      paymentMethod:   match.ad.paymentMethods[0],
+      uniqueFiatAmount: fiatAmount,
+      referenceCode,
+      status:          OrderStatus.MATCHED,
+      paymentDeadline: deadline,
+    });
+    const saved = await this.orderRepo.save(order);
+
+    // Notify matched merchant — they need to actively accept
+    await this.notifService.send(match.merchantId, NotificationType.SCAN_PAY_CREATED, {
+      title: '⚡ New Scan & Pay Request',
+      message: `User wants to pay ₹${fiatAmount}. You receive ${cryptoAmount.toFixed(6)} ${crypto}. Accept to proceed.`,
+      data: { orderId: saved.id },
+    });
+
+    return saved;
+  }
+
+  /**
+   * Step 2: Merchant actively accepts the Scan & Pay order.
+   * MATCHED → MERCHANT_ACCEPTED.
+   * Notifies user — they can now submit the receiver’s UPI/QR.
+   */
+  async merchantAcceptScanPay(orderId: string, user: User) {
+    const order = await this.findOrderOrFail(orderId);
+    if (order.type !== OrderType.SCAN_PAY)
+      throw new BadRequestException('Not a Scan & Pay order');
+    if (order.merchantId !== user.id)
+      throw new ForbiddenException('Only the assigned merchant can accept');
+    this.assertStatus(order, OrderStatus.MATCHED);
+
+    order.status = OrderStatus.MERCHANT_ACCEPTED;
+    await this.orderRepo.save(order);
+
+    await this.notifService.send(order.userId, NotificationType.SCAN_PAY_MERCHANT_ACCEPTED, {
+      title: '✅ Merchant Accepted!',
+      message: 'Your merchant accepted. Now scan or enter the UPI QR of the person you want to pay.',
+      data: { orderId },
+    });
+
+    return order;
+  }
+
+  /**
+   * Step 3: User submits the receiver’s UPI ID (from QR scan or manual entry).
+   * MERCHANT_ACCEPTED → RECEIVER_SUBMITTED.
+   * Notifies merchant to pay the receiver.
+   */
+  async submitReceiver(orderId: string, user: User, dto: SubmitReceiverDto) {
+    const order = await this.findOrderOrFail(orderId);
+    if (order.type !== OrderType.SCAN_PAY)
+      throw new BadRequestException('Not a Scan & Pay order');
+    if (order.userId !== user.id)
+      throw new ForbiddenException('Only the order owner can submit receiver details');
+    this.assertStatus(order, OrderStatus.MERCHANT_ACCEPTED);
+
+    order.receiverUpiId = dto.receiverUpiId;
+    order.receiverName  = dto.receiverName || null;
+    order.status        = OrderStatus.RECEIVER_SUBMITTED;
+    await this.orderRepo.save(order);
+
+    await this.notifService.send(order.merchantId, NotificationType.SCAN_PAY_RECEIVER_SUBMITTED, {
+      title: '📤 Pay This UPI Now',
+      message: `User says: pay \u20b9${order.fiatAmount} to ${dto.receiverUpiId}. Then mark done to receive ${order.cryptoAmount} ${order.crypto}.`,
+      data: { orderId },
+    });
+
+    return order;
+  }
+
+  /**
+   * Step 4: Merchant has paid the fiat receiver — marks order DONE.
+   * RECEIVER_SUBMITTED → COMPLETED.
+   * Crypto is auto-released from user’s wallet → merchant’s wallet.
+   */
+  async merchantConfirmScanPayment(orderId: string, user: User, proofUrl?: string) {
+    const order = await this.findOrderOrFail(orderId);
+    if (order.type !== OrderType.SCAN_PAY)
+      throw new BadRequestException('Not a Scan & Pay order');
+    if (order.merchantId !== user.id)
+      throw new ForbiddenException('Only the assigned merchant can confirm payment');
+    this.assertStatus(order, OrderStatus.RECEIVER_SUBMITTED);
+
+    // No internal releaseEscrow needed — Scan & Pay is fully Web3 to Web3 (Trust-based)
+    // The user already transferred crypto directly to the merchant's Web3 address.
+
+    order.status = OrderStatus.COMPLETED;
+    order.confirmedAt = new Date();
+    if (proofUrl) order.merchantPaymentProofUrl = proofUrl;
+    await this.orderRepo.save(order);
+
+    // Notify both parties
+    await this.notifService.send(order.userId, NotificationType.ORDER_COMPLETED, {
+      title: '🎉 Payment Delivered!',
+      message: `Your ₹${order.fiatAmount} payment has been delivered to ${order.receiverUpiId || 'the receiver'}.`,
+      data: { orderId },
+    });
+    await this.notifService.send(order.merchantId, NotificationType.ORDER_COMPLETED, {
+      title: '🎉 Crypto Credited!',
+      message: `${order.cryptoAmount} ${order.crypto} has been credited to your wallet.`,
+      data: { orderId },
+    });
+
+    return order;
+  }
+
+  /**
+   * @deprecated Kept for backward compat only. The new flow completes when merchant marks done.
+   */
+  async userConfirmReceived(orderId: string, user: User) {
+    const order = await this.findOrderOrFail(orderId);
+    if (order.type !== OrderType.SCAN_PAY) throw new BadRequestException('Not a Scan & Pay order');
+    if (order.userId !== user.id) throw new ForbiddenException('Only the order owner');
+    if (order.status === OrderStatus.COMPLETED) return order; // idempotent
+    throw new BadRequestException('Order flow has changed. Crypto is released automatically when merchant marks done.');
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────────

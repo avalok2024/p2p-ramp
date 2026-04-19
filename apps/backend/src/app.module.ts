@@ -45,14 +45,26 @@ import { HealthModule } from './health/health.module';
 
         // Railway (production) provides DATABASE_URL — use it directly.
         // Local dev falls back to individual DB_* vars pointing at Docker Postgres.
-        const base = {
-          url: cfg.get<string>('DATABASE_URL'),
-        };
+        if (databaseUrl) {
+          // Production: full DATABASE_URL with SSL (Railway, Supabase, etc.)
+          return {
+            type: 'postgres' as const,
+            url: databaseUrl,
+            ssl: { rejectUnauthorized: false },
+            autoLoadEntities: true,
+            synchronize: true,
+          };
+        }
 
+        // Local dev: individual env vars, no SSL (plain Docker Postgres)
         return {
-          type: 'postgres',
-          ...base,
-          ssl: { rejectUnauthorized: false },
+          type: 'postgres' as const,
+          host: cfg.get<string>('DB_HOST') ?? 'localhost',
+          port: cfg.get<number>('DB_PORT') ?? 5432,
+          username: cfg.get<string>('DB_USER') ?? 'ramp_user',
+          password: cfg.get<string>('DB_PASSWORD') ?? 'ramp_pass',
+          database: cfg.get<string>('DB_NAME') ?? 'p2p_ramp',
+          ssl: false,
           autoLoadEntities: true,
           synchronize: true,
         };

@@ -75,7 +75,7 @@ export class MerchantService {
     const ad = await this.adRepo.findOne({ where: { id } });
     if (!ad) throw new NotFoundException('Ad not found');
     if (ad.merchantId !== merchantId) throw new ForbiddenException('Not your ad');
-    await this.adRepo.remove(ad);
+    await this.adRepo.softRemove(ad);
     return { message: 'Ad deleted' };
   }
 }

@@ -9,6 +9,7 @@ import { MatchingModule }  from '../matching/matching.module';
 import { PaymentModule }   from '../payment/payment.module';
 import { NotificationModule } from '../notification/notification.module';
 import { EscrowModule } from '../escrow/escrow.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { EscrowModule } from '../escrow/escrow.module';
     PaymentModule,
     NotificationModule,
     EscrowModule,
+    WalletModule,
   ],
   controllers: [OrderController],
   providers: [OrderService],

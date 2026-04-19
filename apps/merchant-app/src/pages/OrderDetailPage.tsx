@@ -35,6 +35,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scanPayProofUrl, setScanPayProofUrl] = useState('');
   const { wallet, fetchBalance, syncProfileAddress, address } = useWeb3Store();
   const { formatEth, symbol } = useFormatCurrency();
 
@@ -134,6 +135,32 @@ export default function OrderDetailPage() {
     finally { setLoading(false); }
   };
 
+  /** Scan & Pay: merchant accepts the order (MATCHED → MERCHANT_ACCEPTED) */
+  const scanPayAccept = async () => {
+    if (!window.confirm('Accept this Scan & Pay order?')) return;
+    setLoading(true);
+    try {
+      await api.post(`/orders/${orderId}/merchant-accept`);
+      toast.success('Accepted! Waiting for user to submit receiver QR.');
+      load();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || 'Error accepting');
+    } finally { setLoading(false); }
+  };
+
+  /** Scan & Pay: merchant marks they paid the receiver (RECEIVER_SUBMITTED → COMPLETED, crypto auto-released) */
+  const scanPayMerchantPaid = async () => {
+    if (!window.confirm('Confirm you have paid the UPI receiver? This will release crypto to your wallet.')) return;
+    setLoading(true);
+    try {
+      await api.post(`/orders/${orderId}/merchant-paid`, { proofUrl: scanPayProofUrl || undefined });
+      toast.success('🎉 Payment confirmed! Crypto credited to your wallet.');
+      load();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || 'Error confirming payment');
+    } finally { setLoading(false); }
+  };
+
   if (loadError) {
     return (
       <div style={{ padding: 32, textAlign: 'center' }}>
@@ -207,6 +234,11 @@ export default function OrderDetailPage() {
   const canLock = order.status === 'MATCHED' && order.type === 'BUY';
   const canConfirm = order.status === 'PAID_MARKED' && order.type === 'BUY';
   const canMarkPaid = order.status === 'ESCROW_LOCKED' && order.type === 'SELL';
+  const isScanPay = order.type === 'SCAN_PAY';
+  // Scan & Pay step flags
+  const canScanPayAccept      = isScanPay && order.status === 'MATCHED';
+  const isScanPayWaiting      = isScanPay && order.status === 'MERCHANT_ACCEPTED';
+  const canScanPayConfirmPaid = isScanPay && order.status === 'RECEIVER_SUBMITTED';
   const isActive = !['CANCELLED', 'COMPLETED', 'DISPUTED'].includes(order.status);
 
   return (
@@ -321,6 +353,107 @@ export default function OrderDetailPage() {
         </div>
       )}
 
+      {/* ── Scan & Pay: Merchant action panel ──────────────────────────────── */}
+      {isScanPay && (
+        <motion.div
+          className="card"
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          style={{ border: '1px solid rgba(139,92,246,0.4)', background: 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(59,130,246,0.05))' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 20 }}>⚡</span>
+            <p className="title-sm" style={{ color: '#c4b5fd' }}>Scan &amp; Pay Order</p>
+            <span className="badge" style={{ marginLeft: 'auto', background: 'rgba(139,92,246,0.2)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.4)', fontSize: 10 }}>
+              {order.status.replace(/_/g, ' ')}
+            </span>
+          </div>
+
+          {/* Always show order amounts */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="list-row" style={{ cursor: 'default' }}>
+              <span className="body-sm">User pays (INR)</span>
+              <span className="title-sm" style={{ color: 'var(--accent)', fontSize: 20 }}>₹{parseFloat(order.fiatAmount).toLocaleString()}</span>
+            </div>
+            <div className="list-row" style={{ cursor: 'default' }}>
+              <span className="body-sm">You receive (crypto)</span>
+              <span className="title-sm">{parseFloat(order.cryptoAmount).toFixed(6)} {order.crypto}</span>
+            </div>
+          </div>
+
+          {/* STEP 1: Accept */}
+          {canScanPayAccept && (
+            <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(255,200,0,0.06)', border: '1px solid rgba(255,200,0,0.2)' }}>
+              <p style={{ fontSize: 12, color: 'rgba(255,200,80,0.9)', lineHeight: 1.6 }}>
+                User wants to pay via crypto. Accept to proceed. User will then share the receiver’s UPI QR.
+              </p>
+            </div>
+          )}
+
+          {/* STEP 2: Waiting for user to submit receiver QR */}
+          {isScanPayWaiting && (
+            <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)' }}>
+              <p style={{ fontSize: 13, color: '#818cf8', lineHeight: 1.6 }}>
+                🔄 Waiting for user to scan/enter the receiver’s UPI QR...
+              </p>
+            </div>
+          )}
+
+          {/* STEP 3: Receiver submitted — pay them */}
+          {canScanPayConfirmPaid && (
+            <>
+              <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'rgba(255,200,0,0.08)', border: '1px solid rgba(255,200,0,0.2)' }}>
+                <p style={{ fontSize: 12, color: 'rgba(255,200,80,0.95)', lineHeight: 1.6, marginBottom: 8 }}>
+                  👆 Open your UPI app and pay the receiver below. Then tap “I Paid” to release crypto.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="body-sm">Receiver UPI</span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 14, color: 'var(--accent)', fontWeight: 600 }}>
+                        {order.receiverUpiId}
+                      </span>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '2px 8px', fontSize: 11 }}
+                        onClick={() => { navigator.clipboard.writeText(order.receiverUpiId); toast.success('Copied!'); }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  {order.receiverName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span className="body-sm">Receiver Name</span>
+                      <span className="title-sm">{order.receiverName}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="body-sm">Amount to Pay</span>
+                    <span className="title-sm" style={{ color: 'var(--accent)', fontSize: 18 }}>₹{parseFloat(order.fiatAmount).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <label className="label" style={{ marginTop: 12 }}>Payment proof URL (optional)</label>
+              <input
+                className="input"
+                placeholder="Screenshot URL or leave blank"
+                value={scanPayProofUrl}
+                onChange={(e) => setScanPayProofUrl(e.target.value)}
+                style={{ marginTop: 6 }}
+              />
+            </>
+          )}
+
+          {/* STEP 4: Already completed */}
+          {order.status === 'COMPLETED' && (
+            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}>
+              <p style={{ fontSize: 13, color: '#4ade80' }}>✅ Done! Crypto credited to your wallet.</p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+
       {order.type === 'SELL' && order.status === 'MATCHED' && isActive && (
         <div className="card" style={{ border: '1px solid var(--warning)', background: 'rgba(255, 170, 0, 0.1)' }}>
           <p className="title-sm" style={{ color: 'var(--warning)', marginBottom: 8 }}>⚠️ Waiting for User Escrow Deposit</p>
@@ -336,6 +469,34 @@ export default function OrderDetailPage() {
           <p className="label" style={{ marginBottom: 8 }}>Payment Proof</p>
           <img src={order.paymentProofUrl} alt="Payment proof" style={{ borderRadius: 8, width: '100%' }} />
         </div>
+      )}
+
+      {canScanPayAccept && (
+        <motion.button
+          id="scan-pay-accept-btn"
+          className="btn btn-primary btn-full btn-lg"
+          onClick={scanPayAccept}
+          disabled={loading}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          whileTap={{ scale: 0.97 }}
+          style={{ marginTop: 8, fontSize: 16, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)' }}
+        >
+          {loading ? 'Accepting…' : '⚡ Accept Scan & Pay Order'}
+        </motion.button>
+      )}
+
+      {canScanPayConfirmPaid && (
+        <motion.button
+          id="scan-pay-merchant-paid-btn"
+          className="btn btn-primary btn-full btn-lg"
+          onClick={scanPayMerchantPaid}
+          disabled={loading}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          whileTap={{ scale: 0.97 }}
+          style={{ marginTop: 8, fontSize: 16, background: 'linear-gradient(135deg, #059669, #10b981)' }}
+        >
+          {loading ? 'Confirming…' : '✅ I Paid the Receiver — Release Crypto'}
+        </motion.button>
       )}
 
       {canLock && (
@@ -379,7 +540,15 @@ export default function OrderDetailPage() {
         </motion.button>
       )}
 
-      {(order.status === 'CREATED' || order.status === 'MATCHED' || order.status === 'ESCROW_LOCKED') && (
+      {(order.status === 'CREATED' || order.status === 'MATCHED' || order.status === 'ESCROW_LOCKED') &&
+       !isScanPay && (
+        <button className="btn btn-secondary btn-full"
+          disabled={loading} onClick={cancelOrder} style={{ marginTop: 8 }}>
+          Cancel Order
+        </button>
+      )}
+
+      {isScanPay && (order.status === 'MATCHED' || order.status === 'MERCHANT_ACCEPTED') && (
         <button className="btn btn-secondary btn-full"
           disabled={loading} onClick={cancelOrder} style={{ marginTop: 8 }}>
           Cancel Order

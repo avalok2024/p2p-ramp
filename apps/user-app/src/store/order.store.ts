@@ -31,6 +31,10 @@ export interface Order {
   merchantAd?: any;
   escrow?: any;
   dispute?: any;
+  // Scan & Pay fields
+  receiverUpiId?: string | null;
+  receiverName?: string | null;
+  merchantPaymentProofUrl?: string | null;
 }
 
 export interface CreateOrderPayload {
@@ -53,6 +57,11 @@ interface OrderState {
   confirmPayment: (id: string) => Promise<Order>;
   cancelOrder: (id: string) => Promise<Order>;
   raiseDispute: (id: string, reason: string, evidenceUrls?: string[]) => Promise<void>;
+  // Scan & Pay
+  createScanPayOrder: (data: { crypto: string; fiatAmount: number }) => Promise<Order>;
+  submitReceiver: (id: string, receiverUpiId: string, receiverName?: string) => Promise<Order>;
+  merchantConfirmScanPayment: (id: string, proofUrl?: string) => Promise<Order>;
+  userConfirmReceived: (id: string) => Promise<Order>;
 }
 
 export const useOrderStore = create<OrderState>((set, get) => ({
@@ -104,5 +113,30 @@ export const useOrderStore = create<OrderState>((set, get) => ({
       reason,
       evidenceUrls: evidenceUrls?.length ? evidenceUrls : undefined,
     });
+  },
+
+  // ── Scan & Pay ─────────────────────────────────────
+  createScanPayOrder: async (data) => {
+    const res = await api.post('/orders/scan-pay', data);
+    set((s) => ({ orders: [res.data, ...s.orders], activeOrder: res.data }));
+    return res.data;
+  },
+
+  submitReceiver: async (id, receiverUpiId, receiverName) => {
+    const res = await api.post(`/orders/${id}/submit-receiver`, { receiverUpiId, receiverName });
+    set({ activeOrder: res.data });
+    return res.data;
+  },
+
+  merchantConfirmScanPayment: async (id, proofUrl) => {
+    const res = await api.post(`/orders/${id}/merchant-paid`, { proofUrl });
+    set({ activeOrder: res.data });
+    return res.data;
+  },
+
+  userConfirmReceived: async (id) => {
+    const res = await api.post(`/orders/${id}/user-confirm`);
+    set({ activeOrder: res.data });
+    return res.data;
   },
 }));

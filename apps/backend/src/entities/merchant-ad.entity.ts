@@ -1,6 +1,6 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,
-  ManyToOne, JoinColumn,
+  ManyToOne, JoinColumn, DeleteDateColumn
 } from 'typeorm';
 import { CryptoAsset, PaymentMethod } from '../../../../packages/shared/src';
 import { User } from './user.entity';
@@ -58,4 +58,7 @@ export class MerchantAd {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }

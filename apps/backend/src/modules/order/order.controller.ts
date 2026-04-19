@@ -2,7 +2,7 @@ import {
   Controller, Post, Get, Body, Param, Query, UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { OrderService, CreateOrderDto } from './order.service';
+import { OrderService, CreateOrderDto, CreateScanPayOrderDto, SubmitReceiverDto } from './order.service';
 import { JwtAuthGuard }  from '../../common/guards/jwt-auth.guard';
 import { CurrentUser }   from '../../common/decorators/current-user.decorator';
 import { User }          from '../../entities/user.entity';
@@ -12,6 +12,12 @@ import { IsOptional, IsString, IsUrl } from 'class-validator';
 class MarkPaidDto {
   @IsOptional() @IsString() paymentProofUrl?: string;
 }
+
+class MerchantPaidDto {
+  @IsOptional() @IsString() proofUrl?: string;
+}
+
+class SubmitReceiverBody extends SubmitReceiverDto {}
 
 @ApiTags('Orders')
 @ApiBearerAuth()
@@ -64,5 +70,44 @@ export class OrderController {
   @ApiOperation({ summary: 'Cancel an order' })
   cancel(@Param('id') id: string, @CurrentUser() user: User) {
     return this.orderService.cancelOrder(id, user);
+  }
+
+  // ── Scan & Pay endpoints ──────────────────────────────────────────────
+
+  @Post('scan-pay')
+  @ApiOperation({ summary: 'Create a Scan & Pay order (trust-based, no escrow)' })
+  createScanPay(@CurrentUser() user: User, @Body() dto: CreateScanPayOrderDto) {
+    return this.orderService.createScanPayOrder(user, dto);
+  }
+
+  @Post(':id/merchant-paid')
+  @ApiOperation({ summary: 'Merchant confirms they paid the UPI receiver' })
+  merchantPaid(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: MerchantPaidDto,
+  ) {
+    return this.orderService.merchantConfirmScanPayment(id, user, dto.proofUrl);
+  }
+
+  @Post(':id/user-confirm')
+  @ApiOperation({ summary: 'User confirms the fiat receiver was paid → releases crypto to merchant' })
+  userConfirm(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.orderService.userConfirmReceived(id, user);
+  }
+  @Post(':id/merchant-accept')
+  @ApiOperation({ summary: 'Merchant actively accepts a Scan & Pay order' })
+  merchantAccept(@Param('id') id: string, @CurrentUser() user: User) {
+    return this.orderService.merchantAcceptScanPay(id, user);
+  }
+
+  @Post(':id/submit-receiver')
+  @ApiOperation({ summary: 'User submits the receiver UPI/QR after merchant accepted' })
+  submitReceiver(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+    @Body() dto: SubmitReceiverBody,
+  ) {
+    return this.orderService.submitReceiver(id, user, dto);
   }
 }

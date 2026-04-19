@@ -115,6 +115,8 @@ export default function OrderDetailPage() {
   // ── COMPLETION SCREEN ──────────────────────────────────────────────────────
   if (order.status === 'COMPLETED') {
     const isSell = order.type === 'SELL';
+    const isScanPay = order.type === 'SCAN_PAY';
+
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -130,9 +132,13 @@ export default function OrderDetailPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <h1 className="title-lg" style={{ marginBottom: 8 }}>Trade Complete! 🎉</h1>
+          <h1 className="title-lg" style={{ marginBottom: 8 }}>{isScanPay ? 'Payment Delivered! 🎉' : 'Trade Complete! 🎉'}</h1>
           <p className="body-sm" style={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
-            {isSell ? 'You have received your fiat payment.' : `Your ${order.crypto} was released on-chain to your profile wallet address.`}
+            {isScanPay 
+              ? `₹${parseFloat(order.fiatAmount).toLocaleString()} was successfully delivered to the receiver.`
+              : isSell 
+                  ? 'You have received your fiat payment.' 
+                  : `Your ${order.crypto} was released on-chain to your profile wallet address.`}
           </p>
           <p className="body-sm" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Ref: {order.referenceCode}</p>
         </motion.div>
@@ -140,23 +146,25 @@ export default function OrderDetailPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
           className="card"
-          style={{ width: '100%', maxWidth: 340 }}
+          style={{ width: '100%', maxWidth: 340, textAlign: 'left' }}
         >
           <div className="list-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
-            <span className="body-sm">Amount (USDT)</span>
-            <span className="title-sm" style={{ color: 'var(--accent)' }}>≈ {(parseFloat(order.fiatAmount) / 83).toFixed(2)} USDT</span>
-          </div>
-          <div className="list-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
-            <span className="body-sm">Amount ({order.crypto})</span>
+            <span className="body-sm">You Paid (On-chain)</span>
             <span className="title-sm">{parseFloat(order.cryptoAmount).toFixed(6)} {order.crypto}</span>
           </div>
           <div className="list-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
-            <span className="body-sm">Fiat Paid</span>
+            <span className="body-sm">Fiat Delivered</span>
             <span className="title-sm">₹{parseFloat(order.fiatAmount).toFixed(2)}</span>
           </div>
+          {isScanPay && order.receiverUpiId && (
+            <div className="list-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
+              <span className="body-sm">Receiver UPI</span>
+              <span className="title-sm" style={{ color: 'var(--accent)' }}>{order.receiverUpiId}</span>
+            </div>
+          )}
           <div className="list-row">
             <span className="body-sm">Order Type</span>
-            <span className="title-sm" style={{ color: isSell ? 'var(--purple)' : 'var(--accent)' }}>{order.type}</span>
+            <span className="title-sm" style={{ color: isScanPay ? '#fbbf24' : (isSell ? 'var(--purple)' : 'var(--accent)') }}>{order.type.replace('_', ' ')}</span>
           </div>
         </motion.div>
 

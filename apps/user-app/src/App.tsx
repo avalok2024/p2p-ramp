@@ -14,6 +14,7 @@ import OrdersPage     from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import WalletPage     from './pages/WalletPage';
 import ProfilePage    from './pages/ProfilePage';
+import ScanPayPage    from './pages/ScanPayPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -46,6 +47,7 @@ export default function App() {
         <Route index             element={<HomePage />} />
         <Route path="/buy"       element={<BuyCryptoPage />} />
         <Route path="/sell"      element={<SellCryptoPage />} />
+        <Route path="/scan-pay"  element={<ScanPayPage />} />
         <Route path="/payment/:orderId" element={<PaymentPage />} />
         <Route path="/orders"    element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
