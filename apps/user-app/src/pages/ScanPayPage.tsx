@@ -305,14 +305,29 @@ export default function ScanPayPage() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <button
               onClick={() => { stopScanner(); navigate('/'); }}
-              style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, fontSize: 14 }}
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '6px 14px',
+                borderRadius: 99,
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                transform: 'translateX(-4px)'
+              }}
             >
-              ← Back
+              <span style={{ color: 'var(--accent)', fontSize: 16 }}>←</span> Back
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-              <span style={{ fontSize: 26 }}>⚡</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
+              <div style={{ background: 'rgba(251, 191, 36, 0.15)', height: 40, width: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: 22 }}>⚡</span>
+              </div>
               <div>
-                <h1 className="title-lg">Scan &amp; Pay</h1>
+                <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: 'white' }}>Scan &amp; Pay</h1>
                 <p className="body-sm" style={{ color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>
                   Pay anyone with your crypto
                 </p>
@@ -374,13 +389,13 @@ export default function ScanPayPage() {
             </div>
 
             {/* Quick presets & Crypto toggle */}
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
               <button
                 onClick={() => { setCrypto(crypto === 'ETH' ? 'USDT' : 'ETH'); setError(''); }}
                 style={{
-                  padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+                  padding: '6px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600,
                   background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)',
-                  cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 4
+                  cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap'
                 }}
               >
                 ⇌ {crypto}
@@ -390,7 +405,7 @@ export default function ScanPayPage() {
                   key={p}
                   onClick={() => { setDigits(String(p)); setError(''); }}
                   style={{
-                    padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+                    padding: '6px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
                     background: fiatAmount === p ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
                     color: fiatAmount === p ? 'var(--bg)' : 'white',
                     border: 'none', cursor: 'pointer', transition: 'all 0.15s',
@@ -402,7 +417,7 @@ export default function ScanPayPage() {
               <button
                 onClick={handleMax}
                 style={{
-                  padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 600,
+                  padding: '6px 10px', borderRadius: 99, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
                   background: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)',
                   cursor: 'pointer', transition: 'all 0.15s'
                 }}

@@ -67,22 +67,7 @@ export default function HomePage() {
           </button>
         </div>
         {/* Scan & Pay CTA */}
-        <motion.button
-          id="home-scan-pay-btn"
-          onClick={() => navigate('/scan-pay')}
-          className="btn btn-sm"
-          whileTap={{ scale: 0.96 }}
-          style={{
-            marginTop: 10, width: '100%',
-            background: 'linear-gradient(135deg, rgba(139,92,246,0.25), rgba(59,130,246,0.25))',
-            border: '1px solid rgba(139,92,246,0.5)',
-            color: '#c4b5fd',
-            fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          }}
-        >
-          <span style={{ fontSize: 16 }}>⚡</span> Scan &amp; Pay — Pay anyone with crypto
-        </motion.button>
+
       </motion.div>
 
       {/* Active order alert */}

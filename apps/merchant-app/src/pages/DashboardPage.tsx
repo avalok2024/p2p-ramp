@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/auth.store';
 import { useWeb3Store } from '../store/web3.store';
 import { useFormatCurrency } from '../hooks/useFormatCurrency';
 import { CurrencyToggle } from '../components/CurrencyToggle';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 export default function DashboardPage() {
   const user = useAuthStore(s => s.user);
@@ -13,6 +14,8 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { balanceEth } = useWeb3Store();
   const { formatEth, symbol } = useFormatCurrency();
+  const { isInstallable, install } = usePwaInstall();
+
   useEffect(() => {
     api.get('/orders').then(r => setOrders(r.data));
   }, []);
@@ -78,6 +81,13 @@ export default function DashboardPage() {
       {/* Preferences */}
       <div className="card">
         <p className="label" style={{ marginBottom: 12 }}>App Preferences</p>
+        
+        {isInstallable && (
+          <button className="btn btn-primary btn-full" onClick={install} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', marginBottom: 16 }}>
+            📱 Install App
+          </button>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span className="body-sm">Display Currency</span>
           <CurrencyToggle />

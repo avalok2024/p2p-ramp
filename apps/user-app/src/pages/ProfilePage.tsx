@@ -3,12 +3,14 @@ import { useNavigate }  from 'react-router-dom';
 import { motion }       from 'framer-motion';
 import toast            from 'react-hot-toast';
 import { CurrencyToggle } from '../components/CurrencyToggle';
+import { usePwaInstall }  from '../hooks/usePwaInstall';
 
 const KYC_COLOR: Record<string, string> = { VERIFIED: 'badge-green', PENDING: 'badge-warning', REJECTED: 'badge-danger' };
 
 export default function ProfilePage() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { isInstallable, install } = usePwaInstall();
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -72,10 +74,15 @@ export default function ProfilePage() {
 
       {/* Notifications */}
       <motion.div className="card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <p className="label" style={{ marginBottom: 12 }}>Notifications</p>
-        <button id="push-subscribe-btn" className="btn btn-secondary btn-full" onClick={subscribeToPush}>
+        <p className="label" style={{ marginBottom: 12 }}>Notifications & App</p>
+        <button id="push-subscribe-btn" className="btn btn-secondary btn-full" onClick={subscribeToPush} style={{ marginBottom: isInstallable ? 10 : 0 }}>
           🔔 Enable Push Notifications
         </button>
+        {isInstallable && (
+          <button className="btn btn-primary btn-full" onClick={install} style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+            📱 Install App
+          </button>
+        )}
       </motion.div>
 
       {/* Preferences */}
