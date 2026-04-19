@@ -40,19 +40,68 @@ import { HealthModule } from './health/health.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (cfg: ConfigService) => {
+      useFactory: async (cfg: ConfigService) => {
         const databaseUrl = cfg.get<string>('DATABASE_URL');
+
+        // ── Pre-flight: add new enum values BEFORE TypeORM synchronize ────────
+        // TypeORM's synchronize cannot add values to existing PostgreSQL enums.
+        // We patch them manually using a raw connection first, then let TypeORM sync.
+        const { DataSource } = await import('typeorm');
+        const preFlightDs = new DataSource(
+          databaseUrl
+            ? { type: 'postgres', url: databaseUrl, ssl: { rejectUnauthorized: false } }
+            : {
+                type: 'postgres',
+                host: cfg.get<string>('DB_HOST') ?? 'localhost',
+                port: cfg.get<number>('DB_PORT') ?? 5432,
+                username: cfg.get<string>('DB_USER') ?? 'ramp_user',
+                password: cfg.get<string>('DB_PASSWORD') ?? 'ramp_pass',
+                database: cfg.get<string>('DB_NAME') ?? 'p2p_ramp',
+                ssl: false,
+              },
+        );
+        try {
+          await preFlightDs.initialize();
+          const enumPatches = [
+            `ALTER TYPE "order_type_enum"          ADD VALUE IF NOT EXISTS 'SCAN_PAY'`,
+            `ALTER TYPE "order_status_enum"         ADD VALUE IF NOT EXISTS 'MERCHANT_ACCEPTED'`,
+            `ALTER TYPE "order_status_enum"         ADD VALUE IF NOT EXISTS 'RECEIVER_SUBMITTED'`,
+            `ALTER TYPE "order_status_enum"         ADD VALUE IF NOT EXISTS 'SCAN_PAY_MERCHANT_PAID'`,
+            `ALTER TYPE "notifications_type_enum"   ADD VALUE IF NOT EXISTS 'SCAN_PAY_CREATED'`,
+            `ALTER TYPE "notifications_type_enum"   ADD VALUE IF NOT EXISTS 'SCAN_PAY_MERCHANT_PAID'`,
+            `ALTER TYPE "notifications_type_enum"   ADD VALUE IF NOT EXISTS 'SCAN_PAY_MERCHANT_ACCEPTED'`,
+            `ALTER TYPE "notifications_type_enum"   ADD VALUE IF NOT EXISTS 'SCAN_PAY_RECEIVER_SUBMITTED'`,
+          ];
+          for (const sql of enumPatches) {
+            await preFlightDs.query(sql).catch(() => {/* table/type may not exist yet on fresh DB */});
+          }
+        } catch (e) {
+          console.warn('[AppModule] Pre-flight enum patch skipped:', (e as Error).message);
+        } finally {
+          await preFlightDs.destroy().catch(() => {});
+        }
 
         // Railway (production) provides DATABASE_URL — use it directly.
         // Local dev falls back to individual DB_* vars pointing at Docker Postgres.
-        const base = {
-          url: cfg.get<string>('DATABASE_URL'),
-        };
+        if (databaseUrl) {
+          return {
+            type: 'postgres' as const,
+            url: databaseUrl,
+            ssl: { rejectUnauthorized: false },
+            autoLoadEntities: true,
+            synchronize: true,
+          };
+        }
 
+        // Local dev: individual env vars, no SSL (plain Docker Postgres)
         return {
-          type: 'postgres',
-          ...base,
-          ssl: { rejectUnauthorized: false },
+          type: 'postgres' as const,
+          host: cfg.get<string>('DB_HOST') ?? 'localhost',
+          port: cfg.get<number>('DB_PORT') ?? 5432,
+          username: cfg.get<string>('DB_USER') ?? 'ramp_user',
+          password: cfg.get<string>('DB_PASSWORD') ?? 'ramp_pass',
+          database: cfg.get<string>('DB_NAME') ?? 'p2p_ramp',
+          ssl: false,
           autoLoadEntities: true,
           synchronize: true,
         };
