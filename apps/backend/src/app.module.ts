@@ -42,6 +42,9 @@ import { HealthModule } from './health/health.module';
       inject: [ConfigService],
       useFactory: async (cfg: ConfigService) => {
         const databaseUrl = cfg.get<string>('DATABASE_URL');
+        const isProd = !!databaseUrl;
+        const shouldSync =
+          (cfg.get<string>('DB_SYNC') ?? (isProd ? 'false' : 'true')).toLowerCase() === 'true';
 
         // ── Pre-flight: add new enum values BEFORE TypeORM synchronize ────────
         // TypeORM's synchronize cannot add values to existing PostgreSQL enums.
@@ -89,7 +92,7 @@ import { HealthModule } from './health/health.module';
             url: databaseUrl,
             ssl: { rejectUnauthorized: false },
             autoLoadEntities: true,
-            synchronize: true,
+            synchronize: shouldSync,
           };
         }
 
@@ -103,7 +106,7 @@ import { HealthModule } from './health/health.module';
           database: cfg.get<string>('DB_NAME') ?? 'p2p_ramp',
           ssl: false,
           autoLoadEntities: true,
-          synchronize: true,
+          synchronize: shouldSync,
         };
       },
     }),
