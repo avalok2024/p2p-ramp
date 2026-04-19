@@ -55,7 +55,22 @@ export class OrderService implements OnModuleInit, OnModuleDestroy {
     private dataSource: DataSource,
   ) { }
 
-  onModuleInit() {
+  async onModuleInit() {
+    // Safely inject new ENUM values into PostgreSQL (TypeORM sync often misses or fails these)
+    const newTypes = ['SCAN_PAY'];
+    const newStatuses = ['SCAN_PAY_MERCHANT_PAID', 'MERCHANT_ACCEPTED', 'RECEIVER_SUBMITTED'];
+    const newNotifs = ['SCAN_PAY_CREATED', 'SCAN_PAY_MERCHANT_PAID', 'SCAN_PAY_MERCHANT_ACCEPTED', 'SCAN_PAY_RECEIVER_SUBMITTED'];
+    
+    for (const val of newTypes) {
+      await this.dataSource.query(`ALTER TYPE "order_type_enum" ADD VALUE IF NOT EXISTS '${val}'`).catch(() => {});
+    }
+    for (const val of newStatuses) {
+      await this.dataSource.query(`ALTER TYPE "order_status_enum" ADD VALUE IF NOT EXISTS '${val}'`).catch(() => {});
+    }
+    for (const val of newNotifs) {
+      await this.dataSource.query(`ALTER TYPE "notifications_type_enum" ADD VALUE IF NOT EXISTS '${val}'`).catch(() => {});
+    }
+
     this.cancelInterval = setInterval(async () => {
       const expiredOrders = await this.orderRepo.find({
         where: {
